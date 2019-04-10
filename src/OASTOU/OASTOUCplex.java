@@ -1,19 +1,14 @@
 package OASTOU;
-//OASTOUCplex
-
+import java.io.BufferedReader;
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Scanner;
 import ilog.concert.IloConversion;
 import ilog.concert.IloException;
-import ilog.concert.IloLPMatrix;
 import ilog.concert.IloNumExpr;
 import ilog.concert.IloNumVar;
 import ilog.concert.IloNumVarType;
 import ilog.cplex.IloCplex;
 import ilog.cplex.IloCplex.UnknownObjectException;
-
-import java.util.Arrays;
 /**
  * @author： Shih-Hsin Chen
  * @School: Cheng Shiu University
@@ -38,7 +33,7 @@ public class OASTOUCplex {
 	
 	//TOU	
 	public IloNumVar[][] x;	//if order i is processed at period k
-	public IloNumVar[] ST;	//Starting time of each order.
+	public IloNumVar[] ST;	//Starting time of each order.	
 	
 	public OASTOUCplex(Data data) {
 		this.data = data;
@@ -87,10 +82,10 @@ public class OASTOUCplex {
 		}
 		solution = new Solution(data,routes,servetimes);
 		cost = model.getObjValue();		
-		System.out.println("routes="+solution.routes);	
-		System.out.println("getObjValue="+model.getObjValue());//the best integer,
-		System.out.println("getBestObjValue="+model.getBestObjValue());//best bound		
-		System.out.println("getMIPRelativeGap="+model.getMIPRelativeGap());//Gap	
+//		System.out.println("routes="+solution.routes);	
+//		System.out.println("getObjValue="+model.getObjValue());//the best integer,
+//		System.out.println("getBestObjValue="+model.getBestObjValue());//best bound		
+//		System.out.println("getMIPRelativeGap="+model.getMIPRelativeGap());//Gap	
 		
 //		if(model.solveFixed()) {//Continuous model
 //			System.out.println("solveFixed (Continuous model) getObjValue="+model.getObjValue());
@@ -167,13 +162,13 @@ public class OASTOUCplex {
 		}			
 	}
 	//函數功能：根據OAS Single machine數學模型建立CPLEX模型
-	private void build_model() throws IloException {
+	private void build_model(int executeSeconds) throws IloException {
 		//model
 		model = new IloCplex();
 		model.setOut(null);
-		model.setParam(IloCplex.IntParam.RootAlgorithm, ilog.cplex.IloCplex.Algorithm.Dual);
-		model.setParam(IloCplex.IntParam.NodeAlgorithm, ilog.cplex.IloCplex.Algorithm.Dual);
-		model.setParam(IloCplex.Param.TimeLimit, 60);//Seconds
+//		model.setParam(IloCplex.IntParam.RootAlgorithm, ilog.cplex.IloCplex.Algorithm.Dual);
+//		model.setParam(IloCplex.IntParam.NodeAlgorithm, ilog.cplex.IloCplex.Algorithm.Dual);
+		model.setParam(IloCplex.Param.TimeLimit, executeSeconds);//Seconds
 		//variables		
 		y = new IloNumVar[data.jobs][data.jobs];
 		I = new IloNumVar[data.jobs];
@@ -182,8 +177,8 @@ public class OASTOUCplex {
 		C = new IloNumVar[data.jobs];				//完工時間
 		
 		//TOU
-		x = new IloNumVar[data.jobs][data.intervalEndTime.length];
-		ST = new IloNumVar[data.jobs];	
+//		x = new IloNumVar[data.jobs][data.intervalEndTime.length];
+//		ST = new IloNumVar[data.jobs];			
 		
 		//定義cplex變量x和w的數據類型及取值範圍
 		for (int i = 0; i < data.jobs; i++) {
@@ -200,16 +195,16 @@ public class OASTOUCplex {
 			T[i] = model.numVar(0, 1E8, IloNumVarType.Float, "T" + i);
 			R[i] = model.numVar(0, 1E8, IloNumVarType.Float, "R" + i);
 			C[i] = model.numVar(0, 1E8, IloNumVarType.Float, "C" + i);	
-			y[data.jobs-1][i] = model.numVar(0, 0, IloNumVarType.Int, "y" + (data.jobs-1) + "," + i);//Eq13									
+			y[data.jobs-1][i] = model.numVar(0, 0, IloNumVarType.Int, "y" + (data.jobs-1) + "," + i);//Eq13		
 		}	
 		
 		//TOU
-		for (int i = 0; i < data.jobs; i++) {
-			for(int k = 0 ; k < data.intervalEndTime.length; k++) {
-				x[i][k] = model.numVar(0, 1E8, IloNumVarType.Float, "x" + i + "," + k);
-			}
-			ST[i] = model.numVar(0, 1E8, IloNumVarType.Float, "ST" + i);	
-		}		
+//		for (int i = 0; i < data.jobs; i++) {
+//			for(int k = 0 ; k < data.intervalEndTime.length; k++) {
+//				x[i][k] = model.numVar(0, 1E8, IloNumVarType.Float, "x" + i + "," + k);
+//			}
+//			ST[i] = model.numVar(0, 1E8, IloNumVarType.Float, "ST" + i);	
+//		}				
 
 		double maxDeadline = 0;
 		for(int i = 1 ; i < data.deadline.length -1; i++) {
@@ -218,9 +213,10 @@ public class OASTOUCplex {
 			}
 		}
 		
-		if(maxDeadline > 1440) {
-			maxDeadline = 1440;
-		}
+		//24 hours production
+//		if(maxDeadline > 1440) {
+//			maxDeadline = 1440;
+//		}		
 		
 		double minReleaseTime = Double.MAX_VALUE;
 		for(int i = 1 ; i < data.deadline.length-1; i++) {
@@ -235,7 +231,7 @@ public class OASTOUCplex {
 		for(int i = 1; i < data.jobs-1; i++){//i=1,...,n
 			obj = model.sum(obj, R[i]);
 		}
-		model.addMaximize(obj, "Objective function");
+		model.addMaximize(obj);
 		//加入限制式
 		//公式(1)
 		for(int i= 0; i < data.jobs-1;i++){//i=0,...,n
@@ -296,10 +292,10 @@ public class OASTOUCplex {
 		for(int i= 0; i < data.jobs;i++){//i=0,...,n+1												
 			model.addGe(T[i], 0, "Eq8");//Ti>=0
 		}	
-//		//公式(9)
-//		for(int i= 1; i < data.jobs-1;i++){//i=1,...,n				
-//			model.addLe(R[i], model.diff(model.prod(data.profit[i], I[i]), model.prod(T[i], data.weight[i])), "Eq9");//Ri<=reveneuei*Ii-Ti*weighti
-//		}	
+		//公式(9)
+		for(int i= 1; i < data.jobs-1;i++){//i=1,...,n				
+			model.addLe(R[i], model.diff(model.prod(data.profit[i], I[i]), model.prod(T[i], data.weight[i])), "Eq9");//Ri<=reveneuei*Ii-Ti*weighti
+		}	
 		//公式(10)
 		for(int i= 1; i < data.jobs-1;i++){//i=1,...,n												
 			model.addGe(R[i], 0, "Eq10");//Ri>=0
@@ -332,6 +328,7 @@ public class OASTOUCplex {
 			}		
 			model.addGe(C[i], expr18, "Eq18");
 		}	
+		
 //		//公式(19): TOU
 //		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
 //			IloNumExpr expr = model.numExpr();									
@@ -355,44 +352,44 @@ public class OASTOUCplex {
 //				expr = model.sum(expr, x[i][k]);
 //			}		
 //			model.addLe(expr, data.timeBegin[k+1]-data.timeBegin[k], "Eq3-19");
-//		}		
+//		}	
 		
-		//TOU1
-		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
-			IloNumExpr expr = model.diff(C[i], data.processingTime[i]);	
-			for(int j = 0 ; j < data.jobs; j ++) {		
-				if(i != j) {
-					expr = model.diff(expr, model.prod(y[j][i], data.setup[j][i]));
-				}
-			}	
-			expr = model.prod(expr, I[i]);			
-			model.addEq(ST[i], expr, "TOU1");
-		}	
-		//TOU2
-		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
-			for(int k = 0 ; k < data.intervalEndTime.length; k ++) {		
-				IloNumExpr expr = model.max(0, model.diff(data.intervalEndTime[k], ST[i]));
-				expr = model.prod(expr, I[i]);
-				model.addEq(x[i][k], expr, "TOU2");
-			}	
-		}	
-		//TOU3
-		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
-			for(int k = 1 ; k < data.intervalEndTime.length-1; k ++) {		
-				IloNumExpr expr = model.numExpr();	
-				expr = model.diff(C[i], x[i][k]);
-				expr = model.prod(expr, I[i]);
-				model.addEq(x[i][k+1], expr, "TOU3");
-			}	
-		}			
-		//公式(9) with TOU. R[i] minus the electricity cost.
-		for(int i= 1; i < data.jobs-1;i++){//i=1,...,n	
-			IloNumExpr expr = model.diff(model.prod(data.profit[i], I[i]), model.prod(T[i], data.weight[i]));
-			for(int k = 0 ; k < data.intervalEndTime.length; k ++) {	
-				expr = model.diff(expr, model.prod(x[i][k], data.EC[k]*data.unitPowerConsumption[i]));
-			}			
-			model.addLe(R[i], expr, "Eq9-TOU");//Ri<=reveneuei*Ii-Ti*weight_i-xij*eck*power_i
-		}			
+//		//TOU1
+//		for(int i = 1 ; i < data.jobs-1; i ++) {//i=0,...,n+1
+//			IloNumExpr expr = model.diff(C[i], data.processingTime[i]);	
+//			for(int j = 0 ; j < data.jobs-1; j ++) {		
+//				if(i != j) {
+//					expr = model.diff(expr, model.prod(y[j][i], data.setup[j][i]));
+//				}
+//			}	
+//			expr = model.prod(expr, I[i]);			
+//			model.addGe(ST[i], expr, "TOU1");
+//		}		
+//		//TOU2
+//		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
+//			for(int k = 0 ; k < data.intervalEndTime.length; k ++) {		
+//				IloNumExpr expr = model.max(0, model.diff(data.intervalEndTime[k], ST[i]));
+//				expr = model.prod(expr, I[i]);
+//				model.addGe(x[i][k], expr, "TOU2");
+//			}	
+//		}			
+//		//TOU3
+//		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
+//			for(int k = 1 ; k < data.intervalEndTime.length-1; k ++) {		
+//				IloNumExpr expr = model.numExpr();	
+//				expr = model.diff(C[i], x[i][k]);
+//				expr = model.prod(expr, I[i]);
+//				model.addGe(x[i][k+1], expr, "TOU3");
+//			}	
+//		}			
+//		//公式(9) with TOU. R[i] minus the electricity cost.
+//		for(int i= 1; i < data.jobs-1;i++){//i=1,...,n	
+//			IloNumExpr expr = model.diff(model.prod(data.profit[i], I[i]), model.prod(T[i], data.weight[i]));
+//			for(int k = 0 ; k < data.intervalEndTime.length; k ++) {	
+//				expr = model.diff(expr, model.prod(x[i][k], data.EC[k]*data.unitPowerConsumption[i]));
+//			}			
+//			model.addLe(R[i], expr, "Eq9TOU");//Ri<=reveneuei*Ii-Ti*weight_i-xij*eck*power_i
+//		}					
 	}
 	
 	public void solveRelaxation() throws IloException
@@ -414,37 +411,38 @@ public class OASTOUCplex {
 //		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
 //			model.delete(relax2[i]);
 //		}				
-}	
+	}	
 	
-
 	public static void main(String[] args) throws Exception {
 		Data data = new Data();
 		int jobs = 12;//所有點個數，包括0，n+1兩個虛擬訂單
+		int executeSeconds = (int)(jobs*0.5);
 		//讀入不同的測試案例
 		String OASpath = "SingleMachineOASWithTOU/10orders/Tao1/R1/Dataslack_10orders_Tao1R1_1.txt";
 		data.process_OAS(OASpath,data,jobs);
 		System.out.println("input succesfully: \n"+OASpath);
 		System.out.println("cplex procedure###########################");
 		OASTOUCplex cplex = new OASTOUCplex(data);
-		cplex.build_model();
-		double cplex_time1 = System.nanoTime();		
+		cplex.build_model(executeSeconds);
+		cplex.model.exportModel("OASmodel.lp");
+		double cplex_time1 = System.nanoTime();				
 //		cplex.solveRelaxation();
-//		cplex.solve();
+		cplex.solve();
 //		cplex.solution.fesible();
 //		System.out.println(cplex.model);		
 //		cplex.printResults(cplex.model);
-		System.out.println();
-		cplex.model.exportModel("OASmodel.lp");
+//		System.out.println();
+		
 //		System.out.println("\ngetMIPRelativeGap: "+cplex.model.getMIPRelativeGap());
-//		double cplex_time2 = System.nanoTime();
-//		double cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
+		double cplex_time2 = System.nanoTime();
+		double cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
 //		System.out.println("\ncplex_time " + cplex_time + " bestcost " + cplex.cost);
 		
-//		int nJobs[] = new int[] {10};//, 15, 20, 25, 50, 100
-//		int Tao[] = new int[] {1, 3, 5, 7, 9};
-//		int R[] = new int[] {1, 3, 5, 7, 9};
-//		String results = "";
-//		
+		int nJobs[] = new int[] {20};//, 15, 20, 25, 50, 100
+		int Tao[] = new int[] {1, 3, 5, 7, 9};
+		int R[] = new int[] {1, 3, 5, 7, 9};
+		String results = "";
+		
 //		for(int i = 0 ; i < nJobs.length; i++) {
 //			for(int j = 0 ; j < Tao.length; j++) {
 //				for(int k = 0 ; k < R.length; k++) {
@@ -452,19 +450,21 @@ public class OASTOUCplex {
 //						OASpath = "SingleMachineOAS/"+nJobs[i]+"orders/Tao"+Tao[j]+"/R"+R[k]
 //								+"/Dataslack_"+nJobs[i]+"orders_Tao"+Tao[j]+"R"+R[k]+"_"+repl+".txt";
 //						data = new Data();
-//						process_OAS(OASpath,data,nJobs[i]+2);
-//						cplex = new OASTOUCplex(data);
-//						cplex.build_model();
+//						process_OAS(OASpath,data,nJobs[i]+2);						
+//						executeSeconds = (int)(nJobs[i]*30);
+//						cplex_time1 = System.nanoTime();
+//						cplex = new OASCplex(data);
+//						cplex.build_model(executeSeconds);
 ////						cplex.solveRelaxation();
 //						cplex.solve();
-//						results += "Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+cplex.model.getObjValue()+"\n";
-//						System.out.println(nJobs[i]+"-Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+cplex.model.getObjValue()+","+cplex.model.getBestObjValue());
+//						cplex_time2 = System.nanoTime();
+//						cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
+//						results = nJobs[i]+"-Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+cplex.model.getObjValue()
+//							+","+cplex.model.getBestObjValue()+","+cplex_time;
+//						System.out.println(results);
 //					}
 //				}				
 //			}
-//		}
-//		System.out.println("\nResults\n"+results);		
+//		}	
 	}	
 }
-
-

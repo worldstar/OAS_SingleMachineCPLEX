@@ -24,7 +24,7 @@ class Data{
 	double[] unitPowerConsumption;
 
 	// 函数功能：從txt文件中讀取資料並初始化参数
-	public static void process_OAS(String path, Data data, int jobs) throws Exception {
+	public void process_OAS(String path, Data data, int jobs) throws Exception {
 		// 初始化参数
 		FileInputStream fis = new FileInputStream(path);
 		DataInputStream in = new DataInputStream(fis);
@@ -75,7 +75,7 @@ class Data{
 			data.weight[i+1] = Double.parseDouble(tmp[i + 1]);
 		}
 		
-		tmp = br.readLine().split(",");// split 0,10,10,2,4,6,4,5,7,3,5,0
+		tmp = br.readLine().split(",");// Power consumption of each job.
 		for (int i = 0; i < jobs-1; i++) { // i = orders,test 10
 			data.unitPowerConsumption[i+1] = Double.parseDouble(tmp[i + 1]);
 		}		
