@@ -235,7 +235,7 @@ public class OASTOUCplex {
 		for(int i = 1; i < data.jobs-1; i++){//i=1,...,n
 			obj = model.sum(obj, R[i]);
 		}
-		model.addMaximize(obj);
+		model.addMaximize(obj, "Objective function");
 		//加入限制式
 		//公式(1)
 		for(int i= 0; i < data.jobs-1;i++){//i=0,...,n
@@ -359,22 +359,19 @@ public class OASTOUCplex {
 		
 		//TOU1
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
-			IloNumExpr expr = model.numExpr();		
-			expr = model.diff(C[i], data.processingTime[i]);
+			IloNumExpr expr = model.diff(C[i], data.processingTime[i]);	
 			for(int j = 0 ; j < data.jobs; j ++) {		
 				if(i != j) {
 					expr = model.diff(expr, model.prod(y[j][i], data.setup[j][i]));
 				}
 			}	
-			expr = model.prod(expr, I[i]);
-			
+			expr = model.prod(expr, I[i]);			
 			model.addEq(ST[i], expr, "TOU1");
 		}	
 		//TOU2
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
 			for(int k = 0 ; k < data.intervalEndTime.length; k ++) {		
-				IloNumExpr expr = model.numExpr();	
-				expr = model.max(0, model.diff(data.intervalEndTime[k], ST[i]));
+				IloNumExpr expr = model.max(0, model.diff(data.intervalEndTime[k], ST[i]));
 				expr = model.prod(expr, I[i]);
 				model.addEq(x[i][k], expr, "TOU2");
 			}	

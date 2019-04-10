@@ -394,10 +394,10 @@ public class OASCplex {
 	}
 	public static void main(String[] args) throws Exception {
 		Data data = new Data();
-		int jobs = 102;//所有點個數，包括0，n+1兩個虛擬訂單
+		int jobs = 12;//所有點個數，包括0，n+1兩個虛擬訂單
 		int executeSeconds = (int)(jobs*0.5);
 		//讀入不同的測試案例
-		String OASpath = "SingleMachineOAS/100orders/Tao1/R1/Dataslack_100orders_Tao1R1_1.txt";
+		String OASpath = "SingleMachineOAS/10orders/Tao1/R1/Dataslack_10orders_Tao1R1_1.txt";
 		process_OAS(OASpath,data,jobs);
 		System.out.println("input succesfully: \n"+OASpath);
 		System.out.println("cplex procedure###########################");
@@ -410,7 +410,7 @@ public class OASCplex {
 //		System.out.println(cplex.model);		
 //		cplex.printResults(cplex.model);
 //		System.out.println();
-//		cplex.model.exportModel("OASmodel.lp");
+		cplex.model.exportModel("OASmodel.lp");
 //		System.out.println("\ngetMIPRelativeGap: "+cplex.model.getMIPRelativeGap());
 		double cplex_time2 = System.nanoTime();
 		double cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
@@ -421,28 +421,28 @@ public class OASCplex {
 		int R[] = new int[] {1, 3, 5, 7, 9};
 		String results = "";
 		
-		for(int i = 0 ; i < nJobs.length; i++) {
-			for(int j = 0 ; j < Tao.length; j++) {
-				for(int k = 0 ; k < R.length; k++) {
-					for(int repl = 1; repl <= 10; repl++) {
-						OASpath = "SingleMachineOAS/"+nJobs[i]+"orders/Tao"+Tao[j]+"/R"+R[k]
-								+"/Dataslack_"+nJobs[i]+"orders_Tao"+Tao[j]+"R"+R[k]+"_"+repl+".txt";
-						data = new Data();
-						process_OAS(OASpath,data,nJobs[i]+2);						
-						executeSeconds = (int)(nJobs[i]*30);
-						cplex_time1 = System.nanoTime();
-						cplex = new OASCplex(data);
-						cplex.build_model(executeSeconds);
-//						cplex.solveRelaxation();
-						cplex.solve();
-						cplex_time2 = System.nanoTime();
-						cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
-						results = nJobs[i]+"-Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+cplex.model.getObjValue()
-							+","+cplex.model.getBestObjValue()+","+cplex_time;
-						System.out.println(results);
-					}
-				}				
-			}
-		}	
+//		for(int i = 0 ; i < nJobs.length; i++) {
+//			for(int j = 0 ; j < Tao.length; j++) {
+//				for(int k = 0 ; k < R.length; k++) {
+//					for(int repl = 1; repl <= 10; repl++) {
+//						OASpath = "SingleMachineOAS/"+nJobs[i]+"orders/Tao"+Tao[j]+"/R"+R[k]
+//								+"/Dataslack_"+nJobs[i]+"orders_Tao"+Tao[j]+"R"+R[k]+"_"+repl+".txt";
+//						data = new Data();
+//						process_OAS(OASpath,data,nJobs[i]+2);						
+//						executeSeconds = (int)(nJobs[i]*30);
+//						cplex_time1 = System.nanoTime();
+//						cplex = new OASCplex(data);
+//						cplex.build_model(executeSeconds);
+////						cplex.solveRelaxation();
+//						cplex.solve();
+//						cplex_time2 = System.nanoTime();
+//						cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
+//						results = nJobs[i]+"-Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+cplex.model.getObjValue()
+//							+","+cplex.model.getBestObjValue()+","+cplex_time;
+//						System.out.println(results);
+//					}
+//				}				
+//			}
+//		}	
 	}	
 }
