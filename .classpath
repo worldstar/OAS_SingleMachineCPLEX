@@ -8,6 +8,5 @@
 			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="/Applications/CPLEX_Studio129/cplex/bin/x86-64_osx"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="/Applications/GAMS26.1/sysdir/apifiles/Java/api/GAMSJavaAPI.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

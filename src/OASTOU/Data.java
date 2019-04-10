@@ -43,7 +43,7 @@ class Data{
 		//TOU data
 		data.intervalEndTime = new double[] {420, 480, 690, 1110, 1380, 1440};
 		data.EC = new double[] {0.443, 0.8451, 1.2447, 0.8451, 1.2447, 0.443};
-		
+		data.unitPowerConsumption = new double[jobs];
 
 		tmp = br.readLine().split(",");// split 0,10,10,2,4,6,4,5,7,3,5,0
 		for (int i = 0; i < jobs-1; i++) { // i = orders,test 10
@@ -74,6 +74,11 @@ class Data{
 		for (int i = 0; i < jobs-1; i++) { // i = orders,test 10
 			data.weight[i+1] = Double.parseDouble(tmp[i + 1]);
 		}
+		
+		tmp = br.readLine().split(",");// split 0,10,10,2,4,6,4,5,7,3,5,0
+		for (int i = 0; i < jobs-1; i++) { // i = orders,test 10
+			data.unitPowerConsumption[i+1] = Double.parseDouble(tmp[i + 1]);
+		}		
 
 		for (int i = 0; i < jobs ; i++) {
 			tmp = br.readLine().split(",");

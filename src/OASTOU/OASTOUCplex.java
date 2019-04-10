@@ -375,6 +375,7 @@ public class OASTOUCplex {
 			for(int k = 0 ; k < data.intervalEndTime.length; k ++) {		
 				IloNumExpr expr = model.numExpr();	
 				expr = model.max(0, model.diff(data.intervalEndTime[k], ST[i]));
+				expr = model.prod(expr, I[i]);
 				model.addEq(x[i][k], expr, "TOU2");
 			}	
 		}	
@@ -383,24 +384,17 @@ public class OASTOUCplex {
 			for(int k = 1 ; k < data.intervalEndTime.length-1; k ++) {		
 				IloNumExpr expr = model.numExpr();	
 				expr = model.diff(C[i], x[i][k]);
+				expr = model.prod(expr, I[i]);
 				model.addEq(x[i][k+1], expr, "TOU3");
 			}	
-		}	
-//		//TOU5
-//		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
-//			for(int k = 0 ; k < data.intervalEndTime.length-1; k ++) {		
-//				IloNumExpr expr = model.numExpr();	
-//				expr = model.diff(C[i], x[i][k]);
-//				model.addEq(x[i][k+1], expr, "TOU3");
-//			}	
-//		}		
+		}			
 		//公式(9) with TOU. R[i] minus the electricity cost.
 		for(int i= 1; i < data.jobs-1;i++){//i=1,...,n	
 			IloNumExpr expr = model.diff(model.prod(data.profit[i], I[i]), model.prod(T[i], data.weight[i]));
 			for(int k = 0 ; k < data.intervalEndTime.length; k ++) {	
 				expr = model.diff(expr, model.prod(x[i][k], data.EC[k]*data.unitPowerConsumption[i]));
 			}			
-			model.addLe(R[i], expr, "Eq9-TOU");//Ri<=reveneuei*Ii-Ti*weighti
+			model.addLe(R[i], expr, "Eq9-TOU");//Ri<=reveneuei*Ii-Ti*weight_i-xij*eck*power_i
 		}			
 	}
 	
@@ -430,7 +424,7 @@ public class OASTOUCplex {
 		Data data = new Data();
 		int jobs = 12;//所有點個數，包括0，n+1兩個虛擬訂單
 		//讀入不同的測試案例
-		String OASpath = "SingleMachineOAS/10orders/Tao1/R1/Dataslack_10orders_Tao1R1_1.txt";
+		String OASpath = "SingleMachineOASWithTOU/10orders/Tao1/R1/Dataslack_10orders_Tao1R1_1.txt";
 		data.process_OAS(OASpath,data,jobs);
 		System.out.println("input succesfully: \n"+OASpath);
 		System.out.println("cplex procedure###########################");
@@ -443,7 +437,7 @@ public class OASTOUCplex {
 //		System.out.println(cplex.model);		
 //		cplex.printResults(cplex.model);
 		System.out.println();
-//		cplex.model.exportModel("OASmodel.lp");
+		cplex.model.exportModel("OASmodel.lp");
 //		System.out.println("\ngetMIPRelativeGap: "+cplex.model.getMIPRelativeGap());
 //		double cplex_time2 = System.nanoTime();
 //		double cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
