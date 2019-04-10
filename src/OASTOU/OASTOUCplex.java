@@ -20,6 +20,9 @@ import java.util.Arrays;
  * @Descriptions：This MILP model solves the Order acceptance and scheduling problem on a single machine.
  * Oguz, C., Salman, F. S., & Yalçın, Z. B. (2010). Order acceptance and scheduling decisions in make-to-order systems. 
  * International Journal of Production Economics, 125(1), 200-211.
+ * Power cost data:Che, A., Zeng, Y., & Lyu, K. (2016). An efficient greedy insertion heuristic for energy-conscious 
+ * single machine scheduling problem under time-of-use electricity tariffs. Journal of Cleaner Production, 129, 565-577.
+ * We assume we should complete the work before 24:00PM. Thus, the last job C[n+1] <= 1440.
  */
 public class OASTOUCplex {
 	Data data; //定義類Data的對象
@@ -215,6 +218,10 @@ public class OASTOUCplex {
 			}
 		}
 		
+		if(maxDeadline > 1440) {
+			maxDeadline = 1440;
+		}
+		
 		double minReleaseTime = Double.MAX_VALUE;
 		for(int i = 1 ; i < data.deadline.length-1; i++) {
 			if(minReleaseTime > data.releaseTime[i]) {
@@ -299,7 +306,7 @@ public class OASTOUCplex {
 		}		
 		//公式(11)與公式16： Cn+1=max(dvar) change to Cn+1<=max(dvar) as Eq16
 		model.addEq(C[0], 0, "Eq11-1");//Cn+1=max(dvar)
-		model.addEq(C[data.jobs-1], maxDeadline, "Eq11-2 and Eq16");//Cn+1=max(dvar)
+		model.addLe(C[data.jobs-1], maxDeadline, "Eq11-2 and Eq16");//Cn+1=max(dvar)
 		//公式(12)
 		model.addEq(I[0], 1, "Eq12-1");//I0=1
 		model.addEq(I[data.jobs-1], 1, "Eq12-2");//In+1=1	
@@ -379,7 +386,7 @@ public class OASTOUCplex {
 				model.addEq(x[i][k+1], expr, "TOU3");
 			}	
 		}	
-//		//TOU4
+//		//TOU5
 //		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
 //			for(int k = 0 ; k < data.intervalEndTime.length-1; k ++) {		
 //				IloNumExpr expr = model.numExpr();	

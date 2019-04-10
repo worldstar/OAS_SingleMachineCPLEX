@@ -278,7 +278,7 @@ public class OASCplex {
 		}		
 		//公式(11)與公式16： Cn+1=max(dvar) change to Cn+1<=max(dvar) as Eq16
 		model.addEq(C[0], 0, "Eq11-1");//Cn+1=max(dvar)
-		model.addEq(C[data.jobs-1], maxDeadline, "Eq11-2 and Eq16");//Cn+1=max(dvar)
+		model.addLe(C[data.jobs-1], maxDeadline, "Eq11-2 and Eq16");//Cn+1=max(dvar)
 		//公式(12)
 		model.addEq(I[0], 1, "Eq12-1");//I0=1
 		model.addEq(I[data.jobs-1], 1, "Eq12-2");//In+1=1	
