@@ -6,7 +6,7 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 
 //定義參數
-class Data{
+public class Data{
 	int[][] arcs; //arcs[i][j]表示i到j點的弧
 	//OAS starts here.
 	int jobs;            //訂單數

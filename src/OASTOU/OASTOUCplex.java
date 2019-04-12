@@ -32,8 +32,8 @@ public class OASTOUCplex {
 	public IloNumVar[] R;	//Revenue of each order
 	
 	//TOU	
-	public IloNumVar[][] x;	//if order i is processed at period k
-	public IloNumVar[] ST;	//Starting time of each order.	
+//	public IloNumVar[][] x;	//if order i is processed at period k
+//	public IloNumVar[] ST;	//Starting time of each order.	
 	
 	public OASTOUCplex(Data data) {
 		this.data = data;
@@ -413,11 +413,16 @@ public class OASTOUCplex {
 //		}				
 	}	
 	
+	/**
+	 * @param args
+	 * @throws Exception
+	 */
 	public static void main(String[] args) throws Exception {
 		Data data = new Data();
 		int jobs = 12;//所有點個數，包括0，n+1兩個虛擬訂單
 		int executeSeconds = (int)(jobs*0.5);
 		//讀入不同的測試案例
+//		String OASpath = "SingleMachineOAS/10orders/Tao1/R1/Dataslack_10orders_Tao1R1_1.txt";
 		String OASpath = "SingleMachineOASWithTOU/10orders/Tao1/R1/Dataslack_10orders_Tao1R1_1.txt";
 		data.process_OAS(OASpath,data,jobs);
 		System.out.println("input succesfully: \n"+OASpath);
@@ -436,7 +441,7 @@ public class OASTOUCplex {
 //		System.out.println("\ngetMIPRelativeGap: "+cplex.model.getMIPRelativeGap());
 		double cplex_time2 = System.nanoTime();
 		double cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
-//		System.out.println("\ncplex_time " + cplex_time + " bestcost " + cplex.cost);
+		System.out.println("\ncplex_time " + cplex_time + " bestcost " + cplex.cost);
 		
 		int nJobs[] = new int[] {20};//, 15, 20, 25, 50, 100
 		int Tao[] = new int[] {1, 3, 5, 7, 9};
