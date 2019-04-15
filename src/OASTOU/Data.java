@@ -78,10 +78,10 @@ class Data{
 		tmp = br.readLine().split(",");// Power consumption of each job.
 		for (int i = 0; i < jobs-1; i++) {
 			data.unitPowerConsumption[i+1] = Double.parseDouble(tmp[i]);
-			System.out.print(data.unitPowerConsumption[i]+", ");
-		}
+			System.out.print(data.unitPowerConsumption[i+1]+", ");
+		}		
 		System.out.println("\nSetup");
-		for (int i = 0; i < jobs ; i++) {
+		for (int i = 0; i < jobs-1 ; i++) {			
 			tmp = br.readLine().split(",");
 			for (int j = 0; j < jobs; j++) {
 				data.setup[i][j] = Integer.parseInt(tmp[j]);
