@@ -5,27 +5,27 @@ import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 
-//摰儔��
+//定義參數
 class Data{
-	int[][] arcs; //arcs[i][j]銵函內i�j暺�憫
+	int[][] arcs; //arcs[i][j]表示i到j點的弧
 	//OAS starts here.
-	int jobs;            //閮�
-	int releaseTime[];     //������ release date.
-	int[] processingTime;//閮������ processing time
-	int[] dueDay;        //閮鈭斗�� due-date
-	int[] deadline;      //閮鈭斗�� deadline
-	int[] profit;        //閮�瞏� revenue
-	double[] weight;     //撱園�蝵唳��� penalty weight
-	double[][] setup;    //������ setup times	
+	int jobs;            //訂單數
+	int releaseTime[];     //抵達時間 release date.
+	int[] processingTime;//訂單處理時間 processing time
+	int[] dueDay;        //訂單交期 due-date
+	int[] deadline;      //訂單交期 deadline
+	int[] profit;        //訂單利潤 revenue
+	double[] weight;     //延遲懲罰權重 penalty weight
+	double[][] setup;    //整備時間 setup times	
 	
 	//TOU
 	double[] EC;         //Electricity cost	
 	double[] intervalEndTime;  //The interval time
 	double[] unitPowerConsumption;
 
-	// ����嚗�xt��辣銝剛�����蒂�����
+	// 函数功能：從txt文件中讀取資料並初始化参数
 	public void process_OAS(String path, Data data, int jobs) throws Exception {
-		// �����
+		// 初始化参数
 		FileInputStream fis = new FileInputStream(path);
 		DataInputStream in = new DataInputStream(fis);
 		BufferedReader br = new BufferedReader(new InputStreamReader(in));
