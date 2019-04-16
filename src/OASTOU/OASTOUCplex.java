@@ -331,33 +331,7 @@ public class OASTOUCplex {
 				}
 			}		
 			model.addGe(C[i], expr18, "Eq18");
-		}	
-		
-//		//公式(19): TOU
-//		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
-//			IloNumExpr expr = model.numExpr();									
-//			for(int k = 0 ; k < data.timeBegin.length; k ++) {				
-//				expr = model.sum(expr, x[i][k]);
-//			}		
-//			model.addEq(expr, 1, "Eq3-17");
-//		}	
-//		//公式(20): TOU
-//		for(int k = 0 ; k < data.timeBegin.length-1; k ++) {
-//			IloNumExpr expr = model.numExpr();									
-//			for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1		
-//				expr = model.sum(expr, x[i][k]);
-//			}		
-//			model.addLe(expr, data.timeBegin[k+1]-data.timeBegin[k], "Eq3-18");
-//		}		
-//		//公式(21): TOU
-//		for(int k = 0 ; k < data.timeBegin.length-1; k ++) {
-//			IloNumExpr expr = model.numExpr();									
-//			for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1		
-//				expr = model.sum(expr, x[i][k]);
-//			}		
-//			model.addLe(expr, data.timeBegin[k+1]-data.timeBegin[k], "Eq3-19");
-//		}	
-		
+		}			
 		//TOU1
 		for(int i = 1 ; i < data.jobs-1; i ++) {//i=0,...,n+1
 			IloNumExpr expr = model.diff(C[i], data.processingTime[i]);	
