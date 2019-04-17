@@ -41,8 +41,8 @@ class Data{
 		data.arcs = new int[jobs][jobs];
 		
 		//TOU data
-		data.intervalEndTime = new double[] {420, 480, 690, 1110, 1380, 1440};
-		data.EC = new double[] {0.443, 0.8451, 1.2447, 0.8451, 1.2447, 0.443};
+		data.intervalEndTime = new double[] {0, 420, 480, 780, 900, 1440};
+		data.EC = new double[] {0, 0.0422, 0.0750, 0.1327, 0.0750, 0.0422};
 		data.unitPowerConsumption = new double[jobs];
 
 		tmp = br.readLine().split(",");// split 0,10,10,2,4,6,4,5,7,3,5,0

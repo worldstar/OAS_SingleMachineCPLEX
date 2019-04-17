@@ -82,7 +82,7 @@ public class OASTOUCplex {
 		}
 		solution = new Solution(data,routes,servetimes);
 		cost = model.getObjValue();		
-//		System.out.println("routes="+solution.routes);	
+		System.out.println("routes="+solution.routes);	
 //		System.out.println("getObjValue="+model.getObjValue());//the best integer,
 //		System.out.println("getBestObjValue="+model.getBestObjValue());//best bound		
 //		System.out.println("getMIPRelativeGap="+model.getMIPRelativeGap());//Gap	
@@ -156,10 +156,24 @@ public class OASTOUCplex {
 		System.out.println("\nreve: "+reve);
 		System.out.println("");
 		
+		System.out.println("\nSTi:0,...,n+1");
+		for(int i = 0; i < data.jobs; i++) {
+			System.out.print(model.getValue(ST[i])+" ");			
+		}	
+		System.out.println("");
+		
 		System.out.println("\nCi:0,...,n+1");
 		for(int i = 0; i < data.jobs; i++) {
 			System.out.print(model.getValue(C[i])+" ");			
-		}			
+		}	
+		
+		System.out.println("\nXik:0,...,n+1");
+		for(int k = 1 ; k < data.EC.length; k++) {
+			for(int i = 1; i < data.jobs; i++) {
+				System.out.print(model.getValue(x[i][k])+" ");			
+			}	
+			System.out.println("");
+		}		
 	}
 	//函數功能：根據OAS Single machine數學模型建立CPLEX模型
 	/**
@@ -207,7 +221,7 @@ public class OASTOUCplex {
 			for(int k = 0 ; k < data.intervalEndTime.length; k++) {
 				x[i][k] = model.numVar(0, 1E8, IloNumVarType.Float, "x" + i + "," + k);
 			}
-			ST[i] = model.numVar(0, 1E8, IloNumVarType.Float, "ST" + i);	
+			ST[i] = model.numVar(0, data.deadline[i]-data.processingTime[i], IloNumVarType.Float, "ST" + i);	
 		}				
 
 		double maxDeadline = 0;
@@ -331,32 +345,43 @@ public class OASTOUCplex {
 				}
 			}		
 			model.addGe(C[i], expr18, "Eq18");
-		}			
+		}								
+	}
+	
+	public void buildTOU(IloCplex model) throws UnknownObjectException, IloException {
 		//TOU1
-		for(int i = 1 ; i < data.jobs-1; i ++) {//i=0,...,n+1
+		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
 			IloNumExpr expr = model.diff(C[i], data.processingTime[i]);	
-			for(int j = 0 ; j < data.jobs-1; j ++) {		
+			for(int j = 0 ; j < data.jobs; j ++) {		
 				if(i != j) {
 					expr = model.diff(expr, model.prod(y[j][i], data.setup[j][i]));
 				}
-			}			
-			model.addGe(ST[i], expr, "TOU1-2");
+			}	
+			expr = model.diff(ST[i], expr);
+			model.addGe(expr, 0, "TOU1");
 		}				
-//		//TOU2
+		//TOU2
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
-			for(int k = 0 ; k < data.intervalEndTime.length; k ++) {		
-				IloNumExpr expr = model.max(0, model.diff(data.intervalEndTime[k], ST[i]));
+			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {
+				IloNumExpr expr = model.min(C[i], data.intervalEndTime[k]);
+				IloNumExpr expr2 = model.max(ST[i], data.intervalEndTime[k-1]);
+				expr = model.diff(expr, expr2);
 				model.addGe(x[i][k], expr, "TOU2");
 			}	
-		}			
-//		//TOU3
-		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
-			for(int k = 1 ; k < data.intervalEndTime.length-1; k ++) {		
-				IloNumExpr expr = model.numExpr();	
-				expr = model.diff(C[i], x[i][k]);
-				model.addGe(x[i][k+1], expr, "TOU3");
-			}	
-		}			
+		}				
+		//TOU3		
+		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1				
+			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {						
+				model.addGe(x[i][k], 0, "TOU3");			
+			}				
+		}	
+		//TOU4		
+		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1				
+			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {						
+//				model.addGe(model.diff(C[i], ST[i]), x[i][k], "TOU4");			
+			}				
+		}	
+		
 //		//公式(9) with TOU. R[i] minus the electricity cost.
 		for(int i= 1; i < data.jobs-1;i++){//i=1,...,n	
 			IloNumExpr expr = model.diff(model.prod(data.profit[i], I[i]), model.prod(T[i], data.weight[i]));
@@ -364,7 +389,7 @@ public class OASTOUCplex {
 				expr = model.diff(expr, model.prod(x[i][k], data.EC[k]*data.unitPowerConsumption[i]/60.0));
 			}			
 			model.addLe(R[i], expr, "Eq9TOU");//Ri<=reveneuei*Ii-Ti*weight_i-xij*eck*power_i
-		}					
+		}			
 	}
 	
 	public void solveRelaxation() throws IloException
@@ -404,13 +429,14 @@ public class OASTOUCplex {
 		System.out.println("cplex procedure###########################");
 		OASTOUCplex cplex = new OASTOUCplex(data);
 		cplex.build_model(executeSeconds);
+		cplex.buildTOU(cplex.model);
 		cplex.model.exportModel("OASmodel.lp");
 		double cplex_time1 = System.nanoTime();				
 //		cplex.solveRelaxation();
 		cplex.solve();
 //		cplex.solution.fesible();
 //		System.out.println(cplex.model);		
-//		cplex.printResults(cplex.model);
+		cplex.printResults(cplex.model);
 //		System.out.println();
 		
 //		System.out.println("\ngetMIPRelativeGap: "+cplex.model.getMIPRelativeGap());
