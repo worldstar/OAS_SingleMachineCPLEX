@@ -2,6 +2,8 @@ package OASTOU;
 import java.io.BufferedReader;
 import java.io.*;
 import java.util.ArrayList;
+
+import ilog.concert.IloConstraint;
 import ilog.concert.IloConversion;
 import ilog.concert.IloException;
 import ilog.concert.IloNumExpr;
@@ -154,21 +156,33 @@ public class OASTOUCplex {
 			}
 		}	
 		System.out.println("\nreve: "+reve);
-		System.out.println("");
-		
-		System.out.println("\nSTi:0,...,n+1");
-		for(int i = 0; i < data.jobs; i++) {
-			System.out.print(model.getValue(ST[i])+" ");			
-		}	
-		System.out.println("");
+		System.out.println("");		
 		
 		System.out.println("\nCi:0,...,n+1");
 		for(int i = 0; i < data.jobs; i++) {
 			System.out.print(model.getValue(C[i])+" ");			
 		}	
 		
+		System.out.println("\n\n(Pi+Sji):0,...,n+1");
+		for(int i = 0; i < data.jobs; i++) {
+			double tempSum = data.processingTime[i];
+			for(int j = 0 ; j < data.jobs; j++) {
+				if(i != j) {
+					tempSum += model.getValue(y[i][j])*data.setup[i][j];
+				}
+			}
+			System.out.print(tempSum+" ");			
+		}	
+		System.out.println("");			
+		
+		System.out.println("\nSTi:0,...,n+1");
+		for(int i = 0; i < data.jobs; i++) {
+			System.out.print(model.getValue(ST[i])+" ");			
+		}	
+		System.out.println("");		
+		
 		System.out.println("\nXik:0,...,n+1");
-		for(int k = 1 ; k < data.EC.length; k++) {
+		for(int k = 1 ; k < data.EC.length-2; k++) {
 			for(int i = 1; i < data.jobs; i++) {
 				System.out.print(model.getValue(x[i][k])+" ");			
 			}	
@@ -351,41 +365,60 @@ public class OASTOUCplex {
 	public void buildTOU(IloCplex model) throws UnknownObjectException, IloException {
 		//TOU1
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
-			IloNumExpr expr = model.diff(C[i], data.processingTime[i]);	
+			IloNumExpr expr = model.diff(C[i], data.processingTime[i]);		
 			for(int j = 0 ; j < data.jobs; j ++) {		
 				if(i != j) {
-					expr = model.diff(expr, model.prod(y[j][i], data.setup[j][i]));
+					expr = model.diff(expr, model.prod(y[j][i], data.setup[j][i]));					
 				}
 			}	
 			expr = model.diff(ST[i], expr);
 			model.addGe(expr, 0, "TOU1");
-		}				
+		}
 		//TOU2
+//		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
+//			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {
+//				IloNumExpr expr = model.min(C[i], data.intervalEndTime[k]);
+//				IloNumExpr expr2 = model.max(ST[i], data.intervalEndTime[k-1]);
+//				expr = model.diff(expr, expr2);		
+//				model.addGe(x[i][k], expr, "TOU2");
+//			}	
+//		}			
+		
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
-			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {
-				IloNumExpr expr = model.min(C[i], data.intervalEndTime[k]);
-				IloNumExpr expr2 = model.max(ST[i], data.intervalEndTime[k-1]);
-				expr = model.diff(expr, expr2);
-				model.addGe(x[i][k], expr, "TOU2");
+			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {				
+				//theSameZoneCondition				
+				IloConstraint zoneCondition = model.and(model.ge(ST[i], data.intervalEndTime[k-1]), model.le(C[i], data.intervalEndTime[k]));				
+				IloConstraint timeCalc = model.eq(x[i][k], model.diff(C[i], ST[i]));
+				model.add(model.ifThen(zoneCondition , timeCalc));
+				
+				//Across two time zones: For the part of ST to bk
+				zoneCondition = model.and(model.ge(ST[i], data.intervalEndTime[k-1]), model.ge(C[i], data.intervalEndTime[k]));				
+				timeCalc = model.eq(x[i][k], model.diff(data.intervalEndTime[k], ST[i]));
+				model.add(model.ifThen(zoneCondition , timeCalc));		
+				
+				//Across two time zones: For the part of bk to Ci
+//				zoneCondition = model.and(model.le(ST[i], data.intervalEndTime[k-1]), model.le(C[i], data.intervalEndTime[k]));				
+//				timeCalc = model.eq(x[i][k], model.diff(C[i], data.intervalEndTime[k-1]));
+//				model.add(model.ifThen(zoneCondition , timeCalc));					
 			}	
-		}				
+		}
+		
 		//TOU3		
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1				
 			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {						
-				model.addGe(x[i][k], 0, "TOU3");			
+//				model.addGe(x[i][k], 0, "TOU3");			
 			}				
 		}	
 		//TOU4		
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1				
 			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {						
-//				model.addGe(model.diff(C[i], ST[i]), x[i][k], "TOU4");			
+//				model.addGe(model.diff(C[i], ST[i]), x[i][k], "TOU4");		
 			}				
-		}	
-		
+		}			
 //		//公式(9) with TOU. R[i] minus the electricity cost.
 		for(int i= 1; i < data.jobs-1;i++){//i=1,...,n	
 			IloNumExpr expr = model.diff(model.prod(data.profit[i], I[i]), model.prod(T[i], data.weight[i]));
-			for(int k = 0 ; k < data.intervalEndTime.length; k ++) {	
+			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {	
 				expr = model.diff(expr, model.prod(x[i][k], data.EC[k]*data.unitPowerConsumption[i]/60.0));
 			}			
 			model.addLe(R[i], expr, "Eq9TOU");//Ri<=reveneuei*Ii-Ti*weight_i-xij*eck*power_i
