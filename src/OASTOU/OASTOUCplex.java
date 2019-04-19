@@ -165,10 +165,10 @@ public class OASTOUCplex {
 		
 		System.out.println("\n\n(Pi+Sji):0,...,n+1");
 		for(int i = 0; i < data.jobs; i++) {
-			double tempSum = data.processingTime[i];
+			double tempSum = data.processingTime[i]* model.getValue(I[i]);
 			for(int j = 0 ; j < data.jobs; j++) {
 				if(i != j) {
-					tempSum += model.getValue(y[i][j])*data.setup[i][j];
+					tempSum += model.getValue(y[j][i])*data.setup[j][i];
 				}
 			}
 			System.out.print(tempSum+" ");			
@@ -181,9 +181,9 @@ public class OASTOUCplex {
 		}	
 		System.out.println("");		
 		
-		System.out.println("\nXik:0,...,n+1");
+		System.out.println("\nXik, i=0,...,n+1; k=1,...,m");
 		for(int k = 1 ; k < data.EC.length-2; k++) {
-			for(int i = 1; i < data.jobs; i++) {
+			for(int i = 0; i < data.jobs; i++) {
 				System.out.print(model.getValue(x[i][k])+" ");			
 			}	
 			System.out.println("");
@@ -297,13 +297,14 @@ public class OASTOUCplex {
 				}				
 			}			
 		}		
-		//公式(4)
+		//公式(4): Revised by Shih-Hsin Chen. Ii*sij*yij
 		for(int i= 0; i < data.jobs-1;i++){//i=0,...,n			
 			for (int j = 1; j < data.jobs; j++) {//j=1,...,n+1
 				IloNumExpr expr1 = model.numExpr();			
 				if (i != j) {//data.arcs[i][j]==1
 					expr1 = model.sum(expr1, model.prod(data.releaseTime[j]+data.processingTime[j],I[j]));//(rj+pj)Ij
-					expr1 = model.sum(expr1, model.prod(data.setup[i][j], y[i][j]));//(sij)yij	
+//					expr1 = model.sum(expr1, model.prod(data.setup[i][j], y[i][j]));//(sij)yij
+					expr1 = model.sum(expr1, model.prod(I[i], model.prod(data.setup[i][j], y[i][j])));//(sij)yij*Ii
 					model.addLe(expr1, C[j], "Eq4");
 				}												
 			}			
@@ -364,16 +365,44 @@ public class OASTOUCplex {
 	
 	public void buildTOU(IloCplex model) throws UnknownObjectException, IloException {
 		//TOU1
-		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
-			IloNumExpr expr = model.diff(C[i], data.processingTime[i]);		
+//		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
+//			IloNumExpr expr = model.diff(C[i], data.processingTime[i]);			
+//			for(int j = 0 ; j < data.jobs; j ++) {		
+//				if(i != j) {
+//					expr = model.diff(expr, model.prod(y[j][i], data.setup[j][i]));					
+//				}
+//			}		
+//			model.addGe(ST[i], expr, "TOU1");		
+//		}
+		for(int i = 0 ; i < data.jobs; i ++) {//i=1,...,n+1					
 			for(int j = 0 ; j < data.jobs; j ++) {		
 				if(i != j) {
-					expr = model.diff(expr, model.prod(y[j][i], data.setup[j][i]));					
+					IloConstraint ifStatements[] = new IloConstraint[3];
+					ifStatements[0] = model.eq(I[i], 1);
+					ifStatements[1] = model.eq(y[j][i], 1);
+					IloConstraint jBeforeI = model.and(ifStatements);						
+					IloConstraint STiConstraint = model.eq(ST[i], model.max(C[j], data.releaseTime[i]));
+					model.add(model.ifThen(jBeforeI , STiConstraint));				
 				}
-			}	
-			expr = model.diff(ST[i], expr);
-			model.addGe(expr, 0, "TOU1");
+			}			
+		}		
+		
+		//Paper Eq2.
+		for(int k = 1 ; k < data.intervalEndTime.length; k ++) {		
+			IloNumExpr expr = model.numExpr();		
+			for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
+				expr = model.sum(expr, x[i][k]);				
+			}
+			model.addLe(expr, data.intervalEndTime[k]-data.intervalEndTime[k-1], "TOU-xik");
 		}
+		//Paper Eq3.
+//		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1		
+//			IloNumExpr expr = model.numExpr();
+//			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {						
+//				expr = model.sum(expr, model.prod(I[i], x[i][k]));	
+//			}						
+//			model.addGe(expr, model.sum(0.01, model.diff(C[i], ST[i])), "TOU-Eq3");
+//		}		
 		//TOU2
 //		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
 //			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {
@@ -385,43 +414,43 @@ public class OASTOUCplex {
 //		}			
 		
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
-			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {				
-				//theSameZoneCondition				
-				IloConstraint zoneCondition = model.and(model.ge(ST[i], data.intervalEndTime[k-1]), model.le(C[i], data.intervalEndTime[k]));				
-				IloConstraint timeCalc = model.eq(x[i][k], model.diff(C[i], ST[i]));
+			for(int k = 1 ; k < 2; k ++) {		
+				
+				//theSameZoneCondition	
+				IloConstraint ifStatements[] = new IloConstraint[3];
+				ifStatements[0] = model.eq(I[i], 1);
+				ifStatements[1] = model.ge(ST[i], data.intervalEndTime[k-1]);
+				ifStatements[2] = model.le(C[i], data.intervalEndTime[k]);
+				IloConstraint zoneCondition = model.and(ifStatements);				
+				//Please notice the le and eq of the xik. eq will let the STi = Ci
+				IloConstraint timeCalc = model.ge(x[i][k], model.diff(C[i], ST[i]));
 				model.add(model.ifThen(zoneCondition , timeCalc));
 				
 				//Across two time zones: For the part of ST to bk
-				zoneCondition = model.and(model.ge(ST[i], data.intervalEndTime[k-1]), model.ge(C[i], data.intervalEndTime[k]));				
-				timeCalc = model.eq(x[i][k], model.diff(data.intervalEndTime[k], ST[i]));
-				model.add(model.ifThen(zoneCondition , timeCalc));		
+				IloConstraint ifStatements2[] = new IloConstraint[3];
+				ifStatements2[0] = model.eq(I[i], 1);
+				ifStatements2[1] = model.ge(ST[i], data.intervalEndTime[k-1]);
+				ifStatements2[2] = model.ge(C[i], data.intervalEndTime[k]);
+				IloConstraint zoneCondition2 = model.and(ifStatements2);												
+				IloConstraint timeCalc2 = model.le(x[i][k], model.diff(data.intervalEndTime[k], ST[i]));
+				model.add(model.ifThen(zoneCondition2 , timeCalc2));		
 				
 				//Across two time zones: For the part of bk to Ci
-//				zoneCondition = model.and(model.le(ST[i], data.intervalEndTime[k-1]), model.le(C[i], data.intervalEndTime[k]));				
-//				timeCalc = model.eq(x[i][k], model.diff(C[i], data.intervalEndTime[k-1]));
-//				model.add(model.ifThen(zoneCondition , timeCalc));					
+				zoneCondition = model.and(model.le(ST[i], data.intervalEndTime[k-1]), model.and(model.ge(C[i], data.intervalEndTime[k-1]), model.le(C[i], data.intervalEndTime[k])));				
+				timeCalc = model.le(x[i][k], model.diff(C[i], data.intervalEndTime[k-1]));
+				model.add(model.ifThen(zoneCondition , timeCalc));	
+				
+//				model.addLe(x[i][k], model.diff(C[i], ST[i]));
 			}	
 		}
-		
-		//TOU3		
-		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1				
-			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {						
-//				model.addGe(x[i][k], 0, "TOU3");			
-			}				
-		}	
-		//TOU4		
-		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1				
-			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {						
-//				model.addGe(model.diff(C[i], ST[i]), x[i][k], "TOU4");		
-			}				
-		}			
+				
 //		//公式(9) with TOU. R[i] minus the electricity cost.
 		for(int i= 1; i < data.jobs-1;i++){//i=1,...,n	
 			IloNumExpr expr = model.diff(model.prod(data.profit[i], I[i]), model.prod(T[i], data.weight[i]));
 			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {	
 				expr = model.diff(expr, model.prod(x[i][k], data.EC[k]*data.unitPowerConsumption[i]/60.0));
 			}			
-			model.addLe(R[i], expr, "Eq9TOU");//Ri<=reveneuei*Ii-Ti*weight_i-xij*eck*power_i
+			model.addLe(R[i], expr, "Eq9TOU");//Ri<=reveneuei*Ii-Ti*weight_i-xik*eck*power_i/60
 		}			
 	}
 	
@@ -469,7 +498,7 @@ public class OASTOUCplex {
 		cplex.solve();
 //		cplex.solution.fesible();
 //		System.out.println(cplex.model);		
-		cplex.printResults(cplex.model);
+//		cplex.printResults(cplex.model);
 //		System.out.println();
 		
 //		System.out.println("\ngetMIPRelativeGap: "+cplex.model.getMIPRelativeGap());
