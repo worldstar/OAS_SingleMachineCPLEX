@@ -111,23 +111,7 @@ public class OASTOUCplex {
 				}				
 			}
 			System.out.println("");
-		}
-		System.out.println("\nIi:0,...,n+1");
-		for(int i = 0; i < data.jobs; i++) {
-			System.out.print(model.getValue(I[i])+" ");			
-		}
-		System.out.println("\nReleastTime:0,...,n+1");
-		for(int i = 0; i < data.jobs; i++) {
-			System.out.print(data.releaseTime[i]+" ");			
-		}			
-		System.out.println("\nPi:1,...,n");
-		for(int i = 1; i < data.jobs-1; i++) {
-			System.out.print(data.processingTime[i]+" ");			
-		}		
-		System.out.println("\nCi:0,...,n+1");
-		for(int i = 0; i < data.jobs; i++) {
-			System.out.print(model.getValue(C[i])+" ");			
-		}		
+		}				
 		System.out.println("\ndi:0,...,n+1");
 		for(int i = 0; i < data.jobs; i++) {
 			System.out.print(data.dueDay[i]+" ");			
@@ -139,10 +123,6 @@ public class OASTOUCplex {
 		System.out.println("\nTi:0,...,n+1");
 		for(int i = 0; i < data.jobs; i++) {
 			System.out.print(model.getValue(T[i])+" ");			
-		}	
-		System.out.println("\nProfit:0,...,n+1");
-		for(int i = 0; i < data.jobs; i++) {
-			System.out.print(data.profit[i]+" ");			
 		}		
 		System.out.println("\nRi:1,...,n");
 		double reve = 0;
@@ -158,36 +138,79 @@ public class OASTOUCplex {
 		System.out.println("\nreve: "+reve);
 		System.out.println("");		
 		
-		System.out.println("\nCi:0,...,n+1");
+		System.out.print("\nIi ");
 		for(int i = 0; i < data.jobs; i++) {
-			System.out.print(model.getValue(C[i])+" ");			
-		}	
-		
-		System.out.println("\n\n(Pi+Sji):0,...,n+1");
+			System.out.print(model.getValue(I[i])+" ");			
+		}		
+		System.out.print("\nReleastTime ");
 		for(int i = 0; i < data.jobs; i++) {
-			double tempSum = data.processingTime[i]* model.getValue(I[i]);
-			for(int j = 0 ; j < data.jobs; j++) {
-				if(i != j) {
-					tempSum += model.getValue(y[j][i])*data.setup[j][i];
-				}
-			}
-			System.out.print(tempSum+" ");			
-		}	
-		System.out.println("");			
-		
-		System.out.println("\nSTi:0,...,n+1");
+			System.out.print(data.releaseTime[i]+" ");			
+		}			
+		System.out.print ("\nSTi ");
 		for(int i = 0; i < data.jobs; i++) {
 			System.out.print(model.getValue(ST[i])+" ");			
 		}	
-		System.out.println("");		
+		System.out.print("\nPi ");
+		for(int i = 0; i < data.jobs-1; i++) {
+			System.out.print(data.processingTime[i]+" ");			
+		}		
+		System.out.print("\nSji ");
+		for(int i = 0; i < data.jobs; i++) {
+			double tempSetup = 0;
+			for(int j = 0; j < data.jobs-1; j ++) {
+				if(i != j && model.getValue(y[j][i]) == 1) {
+					tempSetup = data.setup[j][i];
+					break;
+				}
+			}
+			System.out.print(tempSetup+" ");					
+		}			
+		System.out.print("\n(Pi+Sji) ");
+		for(int i = 0; i < data.jobs; i++) {
+			if(model.getValue(I[i])== 1){
+				double tempSum = data.processingTime[i];
+				for(int j = 0 ; j < data.jobs; j++) {
+					if(i != j && model.getValue(y[j][i]) == 1) {
+						tempSum += data.setup[j][i];
+					}
+				}
+				System.out.print(tempSum+" ");					
+			}
+			else {
+				System.out.print("0 ");	
+			}		
+		}		
 		
-		System.out.println("\nXik, i=0,...,n+1; k=1,...,m");
+		System.out.print("\nCi ");
+		for(int i = 0; i < data.jobs; i++) {
+			System.out.print(model.getValue(C[i])+" ");			
+		}										
+		
+		System.out.print("\nXik \n");
 		for(int k = 1 ; k < data.EC.length-2; k++) {
 			for(int i = 0; i < data.jobs; i++) {
+				if(i == 0) System.out.print(" ");
 				System.out.print(model.getValue(x[i][k])+" ");			
 			}	
 			System.out.println("");
 		}		
+		
+		System.out.print("\nPower(i) ");
+		for(int i = 0; i < data.jobs; i++) {
+			System.out.print(data.unitPowerConsumption[i]+" ");			
+		}		
+//		System.out.print("\nEC(i) 0 ");
+//		for(int i = 1; i < data.jobs-1; i++) {
+//			System.out.print(model.getValue(x[i][0])*data.unitPowerConsumption[i]*data.EC[0]/60.0+" ");			
+//		}			
+		System.out.print("\nProfit ");
+		for(int i = 0; i < data.jobs; i++) {
+			System.out.print(data.profit[i]+" ");			
+		}			
+		System.out.print("\nRi 0 ");
+		for(int i = 1; i < data.jobs-1; i++) {
+			System.out.print(model.getValue(R[i])+" ");			
+		}			
 	}
 	//函數功能：根據OAS Single machine數學模型建立CPLEX模型
 	/**
@@ -200,7 +223,7 @@ public class OASTOUCplex {
 		model.setOut(null);
 //		model.setParam(IloCplex.IntParam.RootAlgorithm, ilog.cplex.IloCplex.Algorithm.Dual);
 //		model.setParam(IloCplex.IntParam.NodeAlgorithm, ilog.cplex.IloCplex.Algorithm.Dual);
-		model.setParam(IloCplex.Param.TimeLimit, executeSeconds);//Seconds
+//		model.setParam(IloCplex.Param.TimeLimit, executeSeconds);//Seconds
 		//variables		
 		y = new IloNumVar[data.jobs][data.jobs];
 		I = new IloNumVar[data.jobs];
@@ -303,8 +326,8 @@ public class OASTOUCplex {
 				IloNumExpr expr1 = model.numExpr();			
 				if (i != j) {//data.arcs[i][j]==1
 					expr1 = model.sum(expr1, model.prod(data.releaseTime[j]+data.processingTime[j],I[j]));//(rj+pj)Ij
-//					expr1 = model.sum(expr1, model.prod(data.setup[i][j], y[i][j]));//(sij)yij
-					expr1 = model.sum(expr1, model.prod(I[i], model.prod(data.setup[i][j], y[i][j])));//(sij)yij*Ii
+					expr1 = model.sum(expr1, model.prod(data.setup[i][j], y[i][j]));//(sij)yij
+//					expr1 = model.sum(expr1, model.prod(I[i], model.prod(data.setup[i][j], y[i][j])));//(sij)yij*Ii
 					model.addLe(expr1, C[j], "Eq4");
 				}												
 			}			
@@ -414,8 +437,7 @@ public class OASTOUCplex {
 //		}			
 		
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
-			for(int k = 1 ; k < 2; k ++) {		
-				
+			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {						
 				//theSameZoneCondition	
 				IloConstraint ifStatements[] = new IloConstraint[3];
 				ifStatements[0] = model.eq(I[i], 1);
@@ -440,7 +462,12 @@ public class OASTOUCplex {
 				timeCalc = model.le(x[i][k], model.diff(C[i], data.intervalEndTime[k-1]));
 				model.add(model.ifThen(zoneCondition , timeCalc));	
 				
-//				model.addLe(x[i][k], model.diff(C[i], ST[i]));
+				//Rejected order xik = 0
+				IloConstraint ifStatements3[] = new IloConstraint[1];
+				ifStatements3[0] = model.eq(I[i], 0);
+				IloConstraint zoneCondition3 = model.and(ifStatements3);												
+				IloConstraint timeCalc3 = model.le(x[i][k], 0);
+				model.add(model.ifThen(zoneCondition3 , timeCalc3));						
 			}	
 		}
 				
@@ -482,7 +509,7 @@ public class OASTOUCplex {
 	public static void main(String[] args) throws Exception {
 		Data data = new Data();
 		int jobs = 12;//所有點個數，包括0，n+1兩個虛擬訂單
-		int executeSeconds = (int)(jobs*0.5);
+		int executeSeconds = (int)(jobs*10);
 		//讀入不同的測試案例
 //		String OASpath = "SingleMachineOAS/10orders/Tao1/R1/Dataslack_10orders_Tao1R1_1.txt";
 		String OASpath = "SingleMachineOASWithTOU/10orders/Tao1/R1/Dataslack_10orders_Tao1R1_1.txt";
@@ -498,13 +525,14 @@ public class OASTOUCplex {
 		cplex.solve();
 //		cplex.solution.fesible();
 //		System.out.println(cplex.model);		
-//		cplex.printResults(cplex.model);
+		cplex.printResults(cplex.model);
 //		System.out.println();
 		
 //		System.out.println("\ngetMIPRelativeGap: "+cplex.model.getMIPRelativeGap());
 		double cplex_time2 = System.nanoTime();
 		double cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
-		System.out.println("\ncplex_time " + cplex_time + " bestcost " + cplex.cost);
+		System.out.println("\ncplex_time " + cplex_time + " bestcost " + cplex.model.getObjValue()+ " bestcost " 
+				+ " UB " + cplex.model.getBestObjValue());
 		
 		int nJobs[] = new int[] {20};//, 15, 20, 25, 50, 100
 		int Tao[] = new int[] {1, 3, 5, 7, 9};
