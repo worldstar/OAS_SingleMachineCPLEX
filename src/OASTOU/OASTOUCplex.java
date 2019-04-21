@@ -20,6 +20,8 @@ import util.fileWrite1;
  * International Journal of Production Economics, 125(1), 200-211.
  * Power cost data:Che, A., Zeng, Y., & Lyu, K. (2016). An efficient greedy insertion heuristic for energy-conscious 
  * single machine scheduling problem under time-of-use electricity tariffs. Journal of Cleaner Production, 129, 565-577.
+ * Power Cost data: Zhang, H., Zhao, F., Fang, K., & Sutherland, J. W. (2014). 
+ * Energy-conscious flow shop scheduling under time-of-use electricity tariffs. CIRP Annals, 63(1), 37-40.
  * We assume we should complete the work before 24:00PM. Thus, the last job C[n+1] <= 1440.
  */
 public class OASTOUCplex {

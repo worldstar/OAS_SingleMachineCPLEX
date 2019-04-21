@@ -22,6 +22,10 @@ class Data{
 	double[] EC;         //Electricity cost	
 	double[] intervalEndTime;  //The interval time
 	double[] unitPowerConsumption;
+	
+	//CO2
+	double[] CO2Emission;         //CO2 emission (kg/kWH)	
+	double[] CO2IntervalEndTime;  //The interval time
 
 	// 函数功能：從txt文件中讀取資料並初始化参数
 	public void process_OAS(String path, Data data, int jobs) throws Exception {
@@ -44,6 +48,11 @@ class Data{
 		data.intervalEndTime = new double[] {0, 420, 480, 780, 900, 1440};
 		data.EC = new double[] {0, 0.0422, 0.0750, 0.1327, 0.0750, 0.0422};
 		data.unitPowerConsumption = new double[jobs];
+		
+		//CO2 data		
+		data.CO2IntervalEndTime = new double[] {0, 0.725, 0.7, 0.693, 0.682, 0.669, 0.682, 0.693, 0.700, 0.725};
+		data.CO2Emission = new double[] {0, 180, 360, 720, 840, 1020, 1080, 1260, 1380, 1440};
+				
 
 		tmp = br.readLine().split(",");// split 0,10,10,2,4,6,4,5,7,3,5,0
 		for (int i = 0; i < jobs-1; i++) { // i = orders,test 10
