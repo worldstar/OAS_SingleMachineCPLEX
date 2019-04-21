@@ -11,6 +11,7 @@ import ilog.concert.IloNumVar;
 import ilog.concert.IloNumVarType;
 import ilog.cplex.IloCplex;
 import ilog.cplex.IloCplex.UnknownObjectException;
+import util.fileWrite1;
 /**
  * @author： Shih-Hsin Chen
  * @School: Cheng Shiu University
@@ -84,7 +85,7 @@ public class OASTOUCplex {
 		}
 		solution = new Solution(data,routes,servetimes);
 		cost = model.getObjValue();		
-		System.out.println("routes="+solution.routes);	
+//		System.out.println("routes="+solution.routes);	
 //		System.out.println("getObjValue="+model.getObjValue());//the best integer,
 //		System.out.println("getBestObjValue="+model.getBestObjValue());//best bound		
 //		System.out.println("getMIPRelativeGap="+model.getMIPRelativeGap());//Gap	
@@ -223,7 +224,7 @@ public class OASTOUCplex {
 		model.setOut(null);
 //		model.setParam(IloCplex.IntParam.RootAlgorithm, ilog.cplex.IloCplex.Algorithm.Dual);
 //		model.setParam(IloCplex.IntParam.NodeAlgorithm, ilog.cplex.IloCplex.Algorithm.Dual);
-//		model.setParam(IloCplex.Param.TimeLimit, executeSeconds);//Seconds
+		model.setParam(IloCplex.Param.TimeLimit, executeSeconds);//Seconds
 		//variables		
 		y = new IloNumVar[data.jobs][data.jobs];
 		I = new IloNumVar[data.jobs];
@@ -509,58 +510,66 @@ public class OASTOUCplex {
 	public static void main(String[] args) throws Exception {
 		Data data = new Data();
 		int jobs = 12;//所有點個數，包括0，n+1兩個虛擬訂單
-		int executeSeconds = (int)(jobs*10);
+		int executeSeconds = (int)(jobs*60);
+		double cplex_time1 = System.nanoTime();
+		double cplex_time2 = 0, cplex_time = 0;
 		//讀入不同的測試案例
 //		String OASpath = "SingleMachineOAS/10orders/Tao1/R1/Dataslack_10orders_Tao1R1_1.txt";
 		String OASpath = "SingleMachineOASWithTOU/10orders/Tao1/R1/Dataslack_10orders_Tao1R1_1.txt";
+				
 		data.process_OAS(OASpath,data,jobs);
 		System.out.println("input succesfully: \n"+OASpath);
 		System.out.println("cplex procedure###########################");
 		OASTOUCplex cplex = new OASTOUCplex(data);
 		cplex.build_model(executeSeconds);
-		cplex.buildTOU(cplex.model);
-		cplex.model.exportModel("OASmodel.lp");
-		double cplex_time1 = System.nanoTime();				
+		cplex.buildTOU(cplex.model);		
+		/*	
+//		cplex.model.exportModel("OASmodel.lp");						
 //		cplex.solveRelaxation();
 		cplex.solve();
 //		cplex.solution.fesible();
 //		System.out.println(cplex.model);		
-		cplex.printResults(cplex.model);
+//		cplex.printResults(cplex.model);
 //		System.out.println();
 		
 //		System.out.println("\ngetMIPRelativeGap: "+cplex.model.getMIPRelativeGap());
-		double cplex_time2 = System.nanoTime();
-		double cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
-		System.out.println("\ncplex_time " + cplex_time + " bestcost " + cplex.model.getObjValue()+ " bestcost " 
-				+ " UB " + cplex.model.getBestObjValue());
-		
-		int nJobs[] = new int[] {20};//, 15, 20, 25, 50, 100
+		cplex_time2 = System.nanoTime();
+		cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
+		System.out.println(cplex.model.getObjValue()+ "," + cplex.model.getBestObjValue()+ "," 
+				+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes);
+*/
+		int nJobs[] = new int[] {10, 15, 20, 25, 50, 100};//10, 15, 20, 25, 50, 100
 		int Tao[] = new int[] {1, 3, 5, 7, 9};
 		int R[] = new int[] {1, 3, 5, 7, 9};
 		String results = "";
 		
-//		for(int i = 0 ; i < nJobs.length; i++) {
-//			for(int j = 0 ; j < Tao.length; j++) {
-//				for(int k = 0 ; k < R.length; k++) {
-//					for(int repl = 1; repl <= 10; repl++) {
-//						OASpath = "SingleMachineOAS/"+nJobs[i]+"orders/Tao"+Tao[j]+"/R"+R[k]
-//								+"/Dataslack_"+nJobs[i]+"orders_Tao"+Tao[j]+"R"+R[k]+"_"+repl+".txt";
-//						data = new Data();
-//						process_OAS(OASpath,data,nJobs[i]+2);						
-//						executeSeconds = (int)(nJobs[i]*30);
-//						cplex_time1 = System.nanoTime();
-//						cplex = new OASCplex(data);
-//						cplex.build_model(executeSeconds);
-////						cplex.solveRelaxation();
-//						cplex.solve();
-//						cplex_time2 = System.nanoTime();
-//						cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
-//						results = nJobs[i]+"-Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+cplex.model.getObjValue()
-//							+","+cplex.model.getBestObjValue()+","+cplex_time;
-//						System.out.println(results);
-//					}
-//				}				
-//			}
-//		}	
+		for(int i = 0 ; i < nJobs.length; i++) {
+			for(int j = 0 ; j < Tao.length; j++) {
+				for(int k = 0 ; k < R.length; k++) {
+					for(int repl = 1; repl <= 10; repl++) {
+						OASpath = "SingleMachineOASWithTOU/"+nJobs[i]+"orders/Tao"+Tao[j]+"/R"+R[k]
+								+"/Dataslack_"+nJobs[i]+"orders_Tao"+Tao[j]+"R"+R[k]+"_"+repl+".txt";
+						data = new Data();
+						data.process_OAS(OASpath,data,nJobs[i]+2);						
+						executeSeconds = 3600;
+						cplex_time1 = System.nanoTime();
+						cplex = new OASTOUCplex(data);
+						cplex.build_model(executeSeconds);
+						cplex.buildTOU(cplex.model);	
+//						cplex.solveRelaxation();
+						cplex.solve();
+						cplex_time2 = System.nanoTime();
+						cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
+						results = nJobs[i]+"-Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+ cplex.model.getObjValue()+ "," 
+								+ cplex.model.getBestObjValue()+ "," 
+								+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes;
+						System.out.println(results);
+						fileWrite1 fileWriter = new fileWrite1();
+						fileWriter.writeToFile(results, "OAS-TOU-MILP-Solutions.txt");
+						fileWriter.run();
+					}
+				}				
+			}
+		}//end for
 	}	
 }
