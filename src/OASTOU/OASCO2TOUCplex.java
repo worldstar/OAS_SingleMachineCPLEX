@@ -48,6 +48,9 @@ public class OASCO2TOUCplex {
 	public IloNumVar[][] z;	//if order i is processed at period k
 	public IloNumVar[] CO2Qty;	//CO2 emission of each order
 	
+	IloObjective obj;
+	IloObjective objCO2;	
+	
 	public OASCO2TOUCplex(Data data) {
 		this.data = data;
 	}
@@ -299,9 +302,9 @@ public class OASCO2TOUCplex {
 			}
 		}	
 //		System.out.printf("maxDeadline: %s minReleaseTime: %s \n", maxDeadline, minReleaseTime);
-		
+
 		//加入目標函數	
-		IloObjective obj = model.maximize();
+		obj = model.maximize();
 
 		IloNumExpr objExpr = model.numExpr();
 		for(int i = 1; i < data.jobs-1; i++){//i=1,...,n
@@ -310,7 +313,7 @@ public class OASCO2TOUCplex {
 		obj.setExpr(objExpr);		
 		obj.setSense(IloObjectiveSense.Maximize);
 		
-		IloObjective objCO2 = model.minimize();
+		objCO2 = model.minimize();
 		IloNumExpr CO2Expr = model.numExpr();
 		for(int i = 1; i < data.jobs-1; i++){//i=1,...,n
 			CO2Expr = model.sum(CO2Expr, CO2Qty[i]);
@@ -568,7 +571,7 @@ public class OASCO2TOUCplex {
 			
 			IloNumExpr expr2 = model.numExpr();
 			for(int k = 1 ; k < data.CO2IntervalEndTime.length; k ++) {	
-				expr2 = model.diff(expr2, model.prod(z[i][k], data.CO2Emission[k]/60.0));
+				expr2 = model.diff(expr2, model.prod(z[i][k], data.CO2Emission[k]*data.unitPowerConsumption[i]/1000));
 			}			
 			model.addLe(CO2Qty[i], expr, "Eq9CO2TOU");		
 		}			
@@ -663,7 +666,10 @@ public class OASCO2TOUCplex {
 				            System.out.printf("Objective priority %d value = %f%n",
 				            		cplex.model.getMultiObjInfo(MultiObjIntInfo.MultiObjPriority, solns),
 				            		cplex.model.getMultiObjInfo(MultiObjNumInfo.MultiObjObjValue, i));
-				         }						
+				         }					
+				         System.out.println("cplex.model.getMultiObjNsolves(): "+cplex.model.getMultiObjNsolves());
+				         System.out.println(cplex.model.getValue(cplex.obj.getExpr(), -1));
+				         System.out.println(cplex.model.getValue(cplex.objCO2.getExpr(), -1));
 						
 						fileWrite1 fileWriter = new fileWrite1();
 						fileWriter.writeToFile(results, "OAS-TOU-CO2-MILP-Solutions.txt");
