@@ -10,7 +10,10 @@ import ilog.concert.IloNumExpr;
 import ilog.concert.IloNumVar;
 import ilog.concert.IloNumVarType;
 import ilog.concert.IloObjective;
+import ilog.concert.IloObjectiveSense;
 import ilog.cplex.IloCplex;
+import ilog.cplex.IloCplex.MultiObjIntInfo;
+import ilog.cplex.IloCplex.MultiObjNumInfo;
 import ilog.cplex.IloCplex.UnknownObjectException;
 import util.fileWrite1;
 /**
@@ -300,9 +303,11 @@ public class OASCO2TOUCplex {
 		//加入目標函數	
 		IloObjective obj = model.maximize();
 		obj.setExpr(model.sum(R));		
+		obj.setSense(IloObjectiveSense.Maximize);
 		
 		IloObjective objCO2 = model.minimize();
 		objCO2.setExpr(model.sum(CO2Qty));
+		objCO2.setSense(IloObjectiveSense.Minimize);
 
 		// Use a negative weight to minimize the second objective because the 
 		//first objective is maximize.
@@ -642,8 +647,17 @@ public class OASCO2TOUCplex {
 								+ cplex.model.getBestObjValue()+ "," 
 								+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes;
 						System.out.println(results);
+						
+				         // Print the values of the various objectives.
+				         System.out.println("Objective values...");
+				         for (int solns = 0; solns < cplex.model.getMultiObjNsolves(); ++solns) {
+				            System.out.printf("Objective priority %d value = %f%n",
+				            		cplex.model.getMultiObjInfo(MultiObjIntInfo.MultiObjPriority, solns),
+				            		cplex.model.getMultiObjInfo(MultiObjNumInfo.MultiObjObjValue, i));
+				         }						
+						
 						fileWrite1 fileWriter = new fileWrite1();
-						fileWriter.writeToFile(results, "OAS-TOU-MILP-Solutions.txt");
+						fileWriter.writeToFile(results, "OAS-TOU-CO2-MILP-Solutions.txt");
 						fileWriter.run();
 					}
 				}				
