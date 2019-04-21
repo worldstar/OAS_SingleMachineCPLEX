@@ -302,11 +302,20 @@ public class OASCO2TOUCplex {
 		
 		//加入目標函數	
 		IloObjective obj = model.maximize();
-		obj.setExpr(model.sum(R));		
+
+		IloNumExpr objExpr = model.numExpr();
+		for(int i = 1; i < data.jobs-1; i++){//i=1,...,n
+			objExpr = model.sum(objExpr, R[i]);
+		}
+		obj.setExpr(objExpr);		
 		obj.setSense(IloObjectiveSense.Maximize);
 		
 		IloObjective objCO2 = model.minimize();
-		objCO2.setExpr(model.sum(CO2Qty));
+		IloNumExpr CO2Expr = model.numExpr();
+		for(int i = 1; i < data.jobs-1; i++){//i=1,...,n
+			CO2Expr = model.sum(CO2Expr, CO2Qty[i]);
+		}		
+		objCO2.setExpr(CO2Expr);
 		objCO2.setSense(IloObjectiveSense.Minimize);
 
 		// Use a negative weight to minimize the second objective because the 
