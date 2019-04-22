@@ -553,7 +553,7 @@ public class OASTOUCplex {
 								+"/Dataslack_"+nJobs[i]+"orders_Tao"+Tao[j]+"R"+R[k]+"_"+repl+".txt";
 						data = new Data();
 						data.process_OAS(OASpath,data,nJobs[i]+2);						
-						executeSeconds = 3600;
+						executeSeconds = nJobs[i]*60;
 						cplex_time1 = System.nanoTime();
 						cplex = new OASTOUCplex(data);
 						cplex.build_model(executeSeconds);
@@ -564,7 +564,7 @@ public class OASTOUCplex {
 						cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
 						results = nJobs[i]+"-Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+ cplex.model.getObjValue()+ "," 
 								+ cplex.model.getBestObjValue()+ "," 
-								+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes;
+								+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes+"\n";
 						System.out.println(results);
 						fileWrite1 fileWriter = new fileWrite1();
 						fileWriter.writeToFile(results, "OAS-TOU-MILP-Solutions.txt");

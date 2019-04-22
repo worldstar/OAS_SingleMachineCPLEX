@@ -224,6 +224,15 @@ public class OASCO2TOUCplex {
 		System.out.print("\nRi 0 ");
 		for(int i = 1; i < data.jobs-1; i++) {
 			System.out.print(model.getValue(R[i])+" ");			
+		}
+		
+		System.out.print("\nzik \n");
+		for(int k = 1 ; k < data.EC.length-2; k++) {
+			for(int i = 0; i < data.jobs; i++) {
+				if(i == 0) System.out.print(" ");
+				System.out.print(model.getValue(z[i][k])+" ");			
+			}	
+			System.out.println("");
 		}			
 	}
 	//函數功能：根據OAS Single machine數學模型建立CPLEX模型
@@ -526,7 +535,7 @@ public class OASCO2TOUCplex {
 		
 		//CO2
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
-			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {						
+			for(int k = 1 ; k < data.CO2IntervalEndTime.length; k ++) {						
 				//theSameZoneCondition	
 				IloConstraint ifStatements[] = new IloConstraint[3];
 				ifStatements[0] = model.eq(I[i], 1);
@@ -543,7 +552,7 @@ public class OASCO2TOUCplex {
 				ifStatements2[1] = model.ge(ST[i], data.CO2IntervalEndTime[k-1]);
 				ifStatements2[2] = model.ge(C[i], data.CO2IntervalEndTime[k]);
 				IloConstraint zoneCondition2 = model.and(ifStatements2);												
-				IloConstraint timeCalc2 = model.le(z[i][k], model.diff(data.intervalEndTime[k], ST[i]));
+				IloConstraint timeCalc2 = model.le(z[i][k], model.diff(data.CO2IntervalEndTime[k], ST[i]));
 				model.add(model.ifThen(zoneCondition2 , timeCalc2));		
 				
 				//Across two time zones: For the part of bk to Ci
@@ -618,13 +627,13 @@ public class OASCO2TOUCplex {
 		OASCO2TOUCplex cplex = new OASCO2TOUCplex(data);
 		cplex.build_model(executeSeconds);
 		cplex.buildTOU(cplex.model);		
-		/*	
+			
 //		cplex.model.exportModel("OASmodel.lp");						
 //		cplex.solveRelaxation();
 		cplex.solve();
 //		cplex.solution.fesible();
 //		System.out.println(cplex.model);		
-//		cplex.printResults(cplex.model);
+		cplex.printResults(cplex.model);
 //		System.out.println();
 		
 //		System.out.println("\ngetMIPRelativeGap: "+cplex.model.getMIPRelativeGap());
@@ -632,7 +641,8 @@ public class OASCO2TOUCplex {
 		cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
 		System.out.println(cplex.model.getObjValue()+ "," + cplex.model.getBestObjValue()+ "," 
 				+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes);
-*/
+		/*
+		*/
 		int nJobs[] = new int[] {10, 15, 20, 25, 50, 100};//10, 15, 20, 25, 50, 100
 		int Tao[] = new int[] {1, 3, 5, 7, 9};
 		int R[] = new int[] {1, 3, 5, 7, 9};
@@ -657,7 +667,7 @@ public class OASCO2TOUCplex {
 						cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
 						results = nJobs[i]+"-Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+ cplex.model.getObjValue()+ "," 
 								+ cplex.model.getBestObjValue()+ "," 
-								+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes;
+								+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes+"\n";
 						System.out.println(results);
 						
 				         // Print the values of the various objectives.
