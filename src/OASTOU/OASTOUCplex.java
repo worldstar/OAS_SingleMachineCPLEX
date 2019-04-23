@@ -227,6 +227,7 @@ public class OASTOUCplex {
 //		model.setParam(IloCplex.IntParam.RootAlgorithm, ilog.cplex.IloCplex.Algorithm.Dual);
 //		model.setParam(IloCplex.IntParam.NodeAlgorithm, ilog.cplex.IloCplex.Algorithm.Dual);
 		model.setParam(IloCplex.Param.TimeLimit, executeSeconds);//Seconds
+		model.setParam(IloCplex.Param.Threads, 16);
 		//variables		
 		y = new IloNumVar[data.jobs][data.jobs];
 		I = new IloNumVar[data.jobs];
@@ -554,6 +555,11 @@ public class OASTOUCplex {
 						data = new Data();
 						data.process_OAS(OASpath,data,nJobs[i]+2);						
 						executeSeconds = nJobs[i]*60;
+						
+						if(nJobs[i] == 100) {
+							executeSeconds = 3600;
+						}
+						
 						cplex_time1 = System.nanoTime();
 						cplex = new OASTOUCplex(data);
 						cplex.build_model(executeSeconds);
