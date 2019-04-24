@@ -411,7 +411,7 @@ public class OASPSDCplex {
 		double cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
 //		System.out.println("\ncplex_time " + cplex_time + " bestcost " + cplex.cost+"," + cplex.solution.routes);
 		
-		int nJobs[] = new int[] {10, 15};//10, 15, 20, 25, 50, 100
+		int nJobs[] = new int[] {10, 15, 20, 25, 50, 100};//10, 15, 20, 25, 50, 100
 		int Tao[] = new int[] {1, 3, 5, 7, 9};
 		int R[] = new int[] {1, 3, 5, 7, 9};
 		String results = "";
@@ -425,7 +425,6 @@ public class OASPSDCplex {
 						data = new Data();
 						data.process_OAS(OASpath,data,nJobs[i]+2);						
 						executeSeconds = (int)(nJobs[i]*60);
-						executeSeconds = 1;
 						cplex_time1 = System.nanoTime();
 						cplex = new OASPSDCplex(data);
 						cplex.build_model(executeSeconds);
