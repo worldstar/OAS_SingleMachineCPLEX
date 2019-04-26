@@ -485,6 +485,27 @@ public class OASTOUCplex {
 		}			
 	}
 	
+    double[] startVal;
+    double[] startVal2D;
+    
+    public void addSolution(IloCplex model) throws UnknownObjectException, IloException {
+//      IloNumVar[] startVar = new IloNumVar[data.jobs];        
+//       for (int i = 0; i < data.jobs; i++) {
+//               startVar[i] = I[i];//Eq13
+//       }
+//       model.addMIPStart(startVar, startVal, IloCplex.MIPStartEffort.Auto);   
+
+      int idx = 0;
+      IloNumVar[] startVar2D = new IloNumVar[data.jobs*data.jobs];        
+      for (int i = 0; i < data.jobs; i++) {
+          for(int j = 0; j < data.jobs; j++) {
+              startVar2D[idx] = y[i][j];
+              idx ++;
+          }                 
+      }
+      model.addMIPStart(startVar2D, startVal2D, IloCplex.MIPStartEffort.Auto);                  
+  }		
+	
 	public void solveRelaxation() throws IloException
 	{
 		IloConversion relax = model.conversion(I, IloNumVarType.Float);
@@ -499,11 +520,28 @@ public class OASTOUCplex {
 //        System.out.println("Relaxed solution status = " + model.getStatus());
 //        System.out.println("Relaxed solution getObjValue value  = " + model.getObjValue());	
 //        System.out.println("Relaxed solution getBestObjValue value  = " + model.getBestObjValue());		
+
+        startVal = new double[data.jobs];
+        startVal2D = new double[data.jobs*data.jobs];   
         
-//		model.delete(relax);
-//		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
-//			model.delete(relax2[i]);
-//		}				
+        int idx = 0;
+        for (int i = 0; i < data.jobs; i++) {
+                startVal[i] = model.getValue(I[i]) > 0.5 ? 1:0;
+                for(int j = 0; j < data.jobs; j++) {
+	                	if(model.getValue(y[i][j]) > 0.5) {
+	                		startVal2D[idx] = 1;
+//	                		break;
+	                	}
+	                	else {
+	                		startVal2D[idx] = 0;
+	                	}
+                    idx ++;
+                }
+        }    		
+		model.delete(relax);
+		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
+			model.delete(relax2[i]);
+		}				
 	}	
 	
 	/**
@@ -564,7 +602,8 @@ public class OASTOUCplex {
 						cplex = new OASTOUCplex(data);
 						cplex.build_model(executeSeconds);
 						cplex.buildTOU(cplex.model);	
-//						cplex.solveRelaxation();
+						cplex.solveRelaxation();
+						cplex.addSolution(cplex.model);						
 						cplex.solve();
 						cplex_time2 = System.nanoTime();
 						cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
