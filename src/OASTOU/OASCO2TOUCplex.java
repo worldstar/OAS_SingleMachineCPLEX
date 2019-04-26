@@ -347,7 +347,7 @@ public class OASCO2TOUCplex {
 		         objCO2.getExpr()
 		};		
 		model.add(model.maximize(model.staticLex(objArray, weights, priorities, absTols,
-		      relTols, "staticLex1")));
+		      relTols, "staticLex1")));			
 	      		
 		//加入限制式
 		//公式(1)
@@ -479,24 +479,7 @@ public class OASCO2TOUCplex {
 				expr = model.sum(expr, x[i][k]);				
 			}
 			model.addLe(expr, data.intervalEndTime[k]-data.intervalEndTime[k-1], "TOU-xik");
-		}
-		//Paper Eq3.
-//		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1		
-//			IloNumExpr expr = model.numExpr();
-//			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {						
-//				expr = model.sum(expr, model.prod(I[i], x[i][k]));	
-//			}						
-//			model.addGe(expr, model.sum(0.01, model.diff(C[i], ST[i])), "TOU-Eq3");
-//		}		
-		//TOU2
-//		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
-//			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {
-//				IloNumExpr expr = model.min(C[i], data.intervalEndTime[k]);
-//				IloNumExpr expr2 = model.max(ST[i], data.intervalEndTime[k-1]);
-//				expr = model.diff(expr, expr2);		
-//				model.addGe(x[i][k], expr, "TOU2");
-//			}	
-//		}			
+		}	
 		
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
 			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {						
@@ -556,17 +539,23 @@ public class OASCO2TOUCplex {
 				model.add(model.ifThen(zoneCondition2 , timeCalc2));		
 				
 				//Across two time zones: For the part of bk to Ci
-				zoneCondition = model.and(model.le(ST[i], data.CO2IntervalEndTime[k-1]), 
-						model.and(model.ge(C[i], data.CO2IntervalEndTime[k-1]), model.le(C[i], data.CO2IntervalEndTime[k])));				
-				timeCalc = model.le(z[i][k], model.diff(C[i], data.CO2IntervalEndTime[k-1]));
-				model.add(model.ifThen(zoneCondition , timeCalc));	
+				IloConstraint ifStatements3[] = new IloConstraint[4];
+				ifStatements3[0] = model.eq(I[i], 1);
+				ifStatements3[1] = model.le(ST[i], data.CO2IntervalEndTime[k-1]);
+				ifStatements3[2] = model.ge(C[i], data.CO2IntervalEndTime[k-1]);
+				ifStatements3[3] = model.le(C[i], data.CO2IntervalEndTime[k]);		
+				IloConstraint zoneCondition3 = model.and(ifStatements3);		
+//				zoneCondition = model.and(model.le(ST[i], data.CO2IntervalEndTime[k-1]), 
+//						model.and(model.ge(C[i], data.CO2IntervalEndTime[k-1]), model.le(C[i], data.CO2IntervalEndTime[k])));				
+				IloConstraint timeCalc3 = model.le(z[i][k], model.diff(C[i], data.CO2IntervalEndTime[k-1]));
+				model.add(model.ifThen(zoneCondition3, timeCalc3));	
 				
 				//Rejected order xik = 0
-				IloConstraint ifStatements3[] = new IloConstraint[1];
-				ifStatements3[0] = model.eq(I[i], 0);
-				IloConstraint zoneCondition3 = model.and(ifStatements3);												
-				IloConstraint timeCalc3 = model.le(z[i][k], 0);
-				model.add(model.ifThen(zoneCondition3 , timeCalc3));						
+				IloConstraint ifStatements4[] = new IloConstraint[1];
+				ifStatements4[0] = model.eq(I[i], 0);
+				IloConstraint zoneCondition4 = model.and(ifStatements4);												
+				IloConstraint timeCalc4 = model.le(z[i][k], 0);
+				model.add(model.ifThen(zoneCondition4 , timeCalc4));						
 			}	
 		}		
 				
@@ -580,7 +569,7 @@ public class OASCO2TOUCplex {
 			
 			IloNumExpr expr2 = model.numExpr();
 			for(int k = 1 ; k < data.CO2IntervalEndTime.length; k ++) {	
-				expr2 = model.diff(expr2, model.prod(z[i][k], data.CO2Emission[k]*data.unitPowerConsumption[i]/1000));
+				expr2 = model.diff(expr2, model.prod(z[i][k], data.CO2Emission[k]*data.unitPowerConsumption[i]));
 			}			
 			model.addLe(CO2Qty[i], expr, "Eq9CO2TOU");		
 		}			
@@ -648,45 +637,45 @@ public class OASCO2TOUCplex {
 		int R[] = new int[] {1, 3, 5, 7, 9};
 		String results = "";
 		
-		for(int i = 0 ; i < nJobs.length; i++) {
-			for(int j = 0 ; j < Tao.length; j++) {
-				for(int k = 0 ; k < R.length; k++) {
-					for(int repl = 1; repl <= 10; repl++) {
-						OASpath = "SingleMachineOASWithTOU/"+nJobs[i]+"orders/Tao"+Tao[j]+"/R"+R[k]
-								+"/Dataslack_"+nJobs[i]+"orders_Tao"+Tao[j]+"R"+R[k]+"_"+repl+".txt";
-						data = new Data();
-						data.process_OAS(OASpath,data,nJobs[i]+2);						
-						executeSeconds = 3600;
-						cplex_time1 = System.nanoTime();
-						cplex = new OASCO2TOUCplex(data);
-						cplex.build_model(executeSeconds);
-						cplex.buildTOU(cplex.model);	
-//						cplex.solveRelaxation();
-						cplex.solve();
-						cplex_time2 = System.nanoTime();
-						cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
-						results = nJobs[i]+"-Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+ cplex.model.getObjValue()+ "," 
-								+ cplex.model.getBestObjValue()+ "," 
-								+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes+"\n";
-						System.out.println(results);
-						
-				         // Print the values of the various objectives.
-				         System.out.println("Objective values...");
-				         for (int solns = 0; solns < cplex.model.getMultiObjNsolves(); ++solns) {
-				            System.out.printf("Objective priority %d value = %f%n",
-				            		cplex.model.getMultiObjInfo(MultiObjIntInfo.MultiObjPriority, solns),
-				            		cplex.model.getMultiObjInfo(MultiObjNumInfo.MultiObjObjValue, i));
-				         }					
-				         System.out.println("cplex.model.getMultiObjNsolves(): "+cplex.model.getMultiObjNsolves());
-				         System.out.println(cplex.model.getValue(cplex.obj.getExpr(), -1));
-				         System.out.println(cplex.model.getValue(cplex.objCO2.getExpr(), -1));
-						
-						fileWrite1 fileWriter = new fileWrite1();
-						fileWriter.writeToFile(results, "OAS-TOU-CO2-MILP-Solutions.txt");
-						fileWriter.run();
-					}
-				}				
-			}
-		}//end for
+//		for(int i = 0 ; i < nJobs.length; i++) {
+//			for(int j = 0 ; j < Tao.length; j++) {
+//				for(int k = 0 ; k < R.length; k++) {
+//					for(int repl = 1; repl <= 10; repl++) {
+//						OASpath = "SingleMachineOASWithTOU/"+nJobs[i]+"orders/Tao"+Tao[j]+"/R"+R[k]
+//								+"/Dataslack_"+nJobs[i]+"orders_Tao"+Tao[j]+"R"+R[k]+"_"+repl+".txt";
+//						data = new Data();
+//						data.process_OAS(OASpath,data,nJobs[i]+2);						
+//						executeSeconds = 3600;
+//						cplex_time1 = System.nanoTime();
+//						cplex = new OASCO2TOUCplex(data);
+//						cplex.build_model(executeSeconds);
+//						cplex.buildTOU(cplex.model);	
+////						cplex.solveRelaxation();
+//						cplex.solve();
+//						cplex_time2 = System.nanoTime();
+//						cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
+//						results = nJobs[i]+"-Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+ cplex.model.getObjValue()+ "," 
+//								+ cplex.model.getBestObjValue()+ "," 
+//								+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes+"\n";
+//						System.out.println(results);
+//						
+//				         // Print the values of the various objectives.
+//				         System.out.println("Objective values...");
+//				         for (int solns = 0; solns < cplex.model.getMultiObjNsolves(); ++solns) {
+//				            System.out.printf("Objective priority %d value = %f%n",
+//				            		cplex.model.getMultiObjInfo(MultiObjIntInfo.MultiObjPriority, solns),
+//				            		cplex.model.getMultiObjInfo(MultiObjNumInfo.MultiObjObjValue, i));
+//				         }					
+//				         System.out.println("cplex.model.getMultiObjNsolves(): "+cplex.model.getMultiObjNsolves());
+//				         System.out.println(cplex.model.getValue(cplex.obj.getExpr(), -1));
+//				         System.out.println(cplex.model.getValue(cplex.objCO2.getExpr(), -1));
+//						
+//						fileWrite1 fileWriter = new fileWrite1();
+//						fileWriter.writeToFile(results, "OAS-TOU-CO2-MILP-Solutions.txt");
+//						fileWriter.run();
+//					}
+//				}				
+//			}
+//		}//end for
 	}	
 }

@@ -8,5 +8,6 @@
 			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="/Applications/CPLEX_Studio129/cplex/bin/x86-64_osx"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="/Applications/CPLEX_Studio129/cpoptimizer/lib/ILOG.CP.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
