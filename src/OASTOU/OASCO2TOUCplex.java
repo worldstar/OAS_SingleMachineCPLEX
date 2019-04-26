@@ -575,6 +575,27 @@ public class OASCO2TOUCplex {
 		}			
 	}
 	
+    double[] startVal;
+    double[] startVal2D;
+    
+    public void addSolution(IloCplex model) throws UnknownObjectException, IloException {
+//      IloNumVar[] startVar = new IloNumVar[data.jobs];        
+//       for (int i = 0; i < data.jobs; i++) {
+//               startVar[i] = I[i];//Eq13
+//       }
+//       model.addMIPStart(startVar, startVal, IloCplex.MIPStartEffort.Auto);   
+
+      int idx = 0;
+      IloNumVar[] startVar2D = new IloNumVar[data.jobs*data.jobs];        
+      for (int i = 0; i < data.jobs; i++) {
+          for(int j = 0; j < data.jobs; j++) {
+              startVar2D[idx] = y[i][j];
+              idx ++;
+          }                 
+      }
+      model.addMIPStart(startVar2D, startVal2D, IloCplex.MIPStartEffort.Auto);                  
+  }	
+    
 	public void solveRelaxation() throws IloException
 	{
 		IloConversion relax = model.conversion(I, IloNumVarType.Float);
@@ -590,10 +611,10 @@ public class OASCO2TOUCplex {
 //        System.out.println("Relaxed solution getObjValue value  = " + model.getObjValue());	
 //        System.out.println("Relaxed solution getBestObjValue value  = " + model.getBestObjValue());		
         
-//		model.delete(relax);
-//		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
-//			model.delete(relax2[i]);
-//		}				
+		model.delete(relax);
+		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
+			model.delete(relax2[i]);
+		}				
 	}	
 	
 	/**
@@ -637,45 +658,46 @@ public class OASCO2TOUCplex {
 		int R[] = new int[] {1, 3, 5, 7, 9};
 		String results = "";
 		
-//		for(int i = 0 ; i < nJobs.length; i++) {
-//			for(int j = 0 ; j < Tao.length; j++) {
-//				for(int k = 0 ; k < R.length; k++) {
-//					for(int repl = 1; repl <= 10; repl++) {
-//						OASpath = "SingleMachineOASWithTOU/"+nJobs[i]+"orders/Tao"+Tao[j]+"/R"+R[k]
-//								+"/Dataslack_"+nJobs[i]+"orders_Tao"+Tao[j]+"R"+R[k]+"_"+repl+".txt";
-//						data = new Data();
-//						data.process_OAS(OASpath,data,nJobs[i]+2);						
-//						executeSeconds = 3600;
-//						cplex_time1 = System.nanoTime();
-//						cplex = new OASCO2TOUCplex(data);
-//						cplex.build_model(executeSeconds);
-//						cplex.buildTOU(cplex.model);	
-////						cplex.solveRelaxation();
-//						cplex.solve();
-//						cplex_time2 = System.nanoTime();
-//						cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
-//						results = nJobs[i]+"-Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+ cplex.model.getObjValue()+ "," 
-//								+ cplex.model.getBestObjValue()+ "," 
-//								+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes+"\n";
-//						System.out.println(results);
-//						
-//				         // Print the values of the various objectives.
-//				         System.out.println("Objective values...");
-//				         for (int solns = 0; solns < cplex.model.getMultiObjNsolves(); ++solns) {
-//				            System.out.printf("Objective priority %d value = %f%n",
-//				            		cplex.model.getMultiObjInfo(MultiObjIntInfo.MultiObjPriority, solns),
-//				            		cplex.model.getMultiObjInfo(MultiObjNumInfo.MultiObjObjValue, i));
-//				         }					
-//				         System.out.println("cplex.model.getMultiObjNsolves(): "+cplex.model.getMultiObjNsolves());
-//				         System.out.println(cplex.model.getValue(cplex.obj.getExpr(), -1));
-//				         System.out.println(cplex.model.getValue(cplex.objCO2.getExpr(), -1));
-//						
-//						fileWrite1 fileWriter = new fileWrite1();
-//						fileWriter.writeToFile(results, "OAS-TOU-CO2-MILP-Solutions.txt");
-//						fileWriter.run();
-//					}
-//				}				
-//			}
-//		}//end for
+		for(int i = 0 ; i < nJobs.length; i++) {
+			for(int j = 0 ; j < Tao.length; j++) {
+				for(int k = 0 ; k < R.length; k++) {
+					for(int repl = 1; repl <= 10; repl++) {
+						OASpath = "SingleMachineOASWithTOU/"+nJobs[i]+"orders/Tao"+Tao[j]+"/R"+R[k]
+								+"/Dataslack_"+nJobs[i]+"orders_Tao"+Tao[j]+"R"+R[k]+"_"+repl+".txt";
+						data = new Data();
+						data.process_OAS(OASpath,data,nJobs[i]+2);						
+						executeSeconds = 3600;
+						cplex_time1 = System.nanoTime();
+						cplex = new OASCO2TOUCplex(data);
+						cplex.build_model(executeSeconds);
+						cplex.buildTOU(cplex.model);	
+						cplex.solveRelaxation();
+						cplex.addSolution(cplex.model);
+						cplex.solve();
+						cplex_time2 = System.nanoTime();
+						cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
+						results = nJobs[i]+"-Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+ cplex.model.getObjValue()+ "," 
+								+ cplex.model.getBestObjValue()+ "," 
+								+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes+"\n";
+						System.out.println(results);
+						
+				         // Print the values of the various objectives.
+				         System.out.println("Objective values...");
+				         for (int solns = 0; solns < cplex.model.getMultiObjNsolves(); ++solns) {
+				            System.out.printf("Objective priority %d value = %f%n",
+				            		cplex.model.getMultiObjInfo(MultiObjIntInfo.MultiObjPriority, solns),
+				            		cplex.model.getMultiObjInfo(MultiObjNumInfo.MultiObjObjValue, i));
+				         }					
+				         System.out.println("cplex.model.getMultiObjNsolves(): "+cplex.model.getMultiObjNsolves());
+				         System.out.println(cplex.model.getValue(cplex.obj.getExpr(), -1));
+				         System.out.println(cplex.model.getValue(cplex.objCO2.getExpr(), -1));
+						
+						fileWrite1 fileWriter = new fileWrite1();
+						fileWriter.writeToFile(results, "OAS-TOU-CO2-MILP-Solutions.txt");
+						fileWriter.run();
+					}
+				}				
+			}
+		}//end for
 	}	
 }
