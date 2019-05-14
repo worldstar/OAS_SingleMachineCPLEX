@@ -26,7 +26,7 @@ class Data{
 	//CO2
 	double[] CO2Emission;         //CO2 emission (kg/kWH)	
 	double[] CO2IntervalEndTime;  //The interval time
-	double CarbonTax = 0.02673155;       //Average CO2 emission cost per KG of .
+	double CarbonTax = 0.02673155;       //Average CO2 emission cost per KG of some countries.
 
 	// 函数功能：從txt文件中讀取資料並初始化参数
 	public void process_OAS(String path, Data data, int jobs) throws Exception {
