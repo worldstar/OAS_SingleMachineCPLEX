@@ -428,7 +428,7 @@ public class OASTOUCplex {
 		}
 		
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
-			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {						
+			for(int k = 1 ; k < 2; k ++) {						
 				//theSameZoneCondition	
 				IloConstraint ifStatements[] = new IloConstraint[3];
 				ifStatements[0] = model.eq(I[i], 1);
@@ -447,11 +447,18 @@ public class OASTOUCplex {
 				IloConstraint zoneCondition2 = model.and(ifStatements2);												
 				IloConstraint timeCalc2 = model.le(x[i][k], model.diff(data.intervalEndTime[k], ST[i]));
 				model.add(model.ifThen(zoneCondition2 , timeCalc2));		
+
 				
 				//Across two time zones: For the part of bk to Ci
 				zoneCondition = model.and(model.le(ST[i], data.intervalEndTime[k-1]), model.and(model.ge(C[i], data.intervalEndTime[k-1]), model.le(C[i], data.intervalEndTime[k])));				
 				timeCalc = model.le(x[i][k], model.diff(C[i], data.intervalEndTime[k-1]));
 				model.add(model.ifThen(zoneCondition , timeCalc));	
+
+				
+//				model.addLe(x[i][k], model.diff(C[i], ST[i]));
+//				model.addLe(x[i][k], model.diff(data.intervalEndTime[k], ST[i]));
+//				model.addLe(x[i][k], model.diff(C[i], data.intervalEndTime[k-1]));	
+//				model.addGe(x[i][k], 0);		
 				
 				//Rejected order xik = 0
 				IloConstraint ifStatements3[] = new IloConstraint[1];
