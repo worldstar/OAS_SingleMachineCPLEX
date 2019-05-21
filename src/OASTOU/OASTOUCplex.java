@@ -24,6 +24,7 @@ import util.fileWrite1;
  * Energy-conscious flow shop scheduling under time-of-use electricity tariffs. CIRP Annals, 63(1), 37-40.
  * We assume we should complete the work before 24:00PM. Thus, the last job C[n+1] <= 1440.
  */
+
 public class OASTOUCplex {
 	Data data; //定義類Data的對象
 	IloCplex model; //定義cplex內部類的對象
@@ -158,31 +159,31 @@ public class OASTOUCplex {
 			System.out.print(data.processingTime[i]+" ");			
 		}		
 		System.out.print("\nSji ");
-		for(int i = 0; i < data.jobs; i++) {
-			double tempSetup = 0;
-			for(int j = 0; j < data.jobs-1; j ++) {
-				if(i != j && model.getValue(y[j][i]) == 1) {
-					tempSetup = data.setup[j][i];
-					break;
-				}
-			}
-			System.out.print(tempSetup+" ");					
-		}			
-		System.out.print("\n(Pi+Sji) ");
-		for(int i = 0; i < data.jobs; i++) {
-			if(model.getValue(I[i])== 1){
-				double tempSum = data.processingTime[i];
-				for(int j = 0 ; j < data.jobs; j++) {
-					if(i != j && model.getValue(y[j][i]) == 1) {
-						tempSum += data.setup[j][i];
-					}
-				}
-				System.out.print(tempSum+" ");					
-			}
-			else {
-				System.out.print("0 ");	
-			}		
-		}		
+//		for(int i = 0; i < data.jobs; i++) {
+//			double tempSetup = 0;
+//			for(int j = 0; j < data.jobs-1; j ++) {
+//				if(i != j && model.getValue(y[j][i]) == 1) {
+//					tempSetup = data.setup[j][i];
+//					break;
+//				}
+//			}
+//			System.out.print(tempSetup+" ");					
+//		}			
+//		System.out.print("\n(Pi+Sji) ");
+//		for(int i = 0; i < data.jobs; i++) {
+//			if(model.getValue(I[i])== 1){
+//				double tempSum = data.processingTime[i];
+//				for(int j = 0 ; j < data.jobs; j++) {
+//					if(i != j && model.getValue(y[j][i]) == 1) {
+//						tempSum += data.setup[j][i];
+//					}
+//				}
+//				System.out.print(tempSum+" ");					
+//			}
+//			else {
+//				System.out.print("0 ");	
+//			}		
+//		}		
 		
 		System.out.print("\nCi ");
 		for(int i = 0; i < data.jobs; i++) {
@@ -220,7 +221,7 @@ public class OASTOUCplex {
 	 * @param executeSeconds
 	 * @throws IloException
 	 */
-	private void build_model(int executeSeconds) throws IloException {
+	protected void build_model(int executeSeconds) throws IloException {
 		//model
 		model = new IloCplex();
 		model.setOut(null);
@@ -391,28 +392,31 @@ public class OASTOUCplex {
 	}
 	
 	public void buildTOU(IloCplex model) throws UnknownObjectException, IloException {
-		//TOU1
-//		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
-//			IloNumExpr expr = model.diff(C[i], data.processingTime[i]);			
-//			for(int j = 0 ; j < data.jobs; j ++) {		
-//				if(i != j) {
-//					expr = model.diff(expr, model.prod(y[j][i], data.setup[j][i]));					
-//				}
-//			}		
-//			model.addGe(ST[i], expr, "TOU1");		
-//		}
-		for(int i = 0 ; i < data.jobs; i ++) {//i=1,...,n+1					
-			for(int j = 0 ; j < data.jobs; j ++) {		
+		//STi:Eq1
+		for(int i = 1 ; i < data.jobs; i ++) {//i=1,...,n+1		
+			IloNumExpr expr = model.diff(C[i], model.prod(I[i], data.processingTime[i]));
+			for(int j = 0 ; j < data.jobs-1; j ++) {//j=0,...,n	
 				if(i != j) {
-					IloConstraint ifStatements[] = new IloConstraint[3];
-					ifStatements[0] = model.eq(I[i], 1);
-					ifStatements[1] = model.eq(y[j][i], 1);
-					IloConstraint jBeforeI = model.and(ifStatements);						
-					IloConstraint STiConstraint = model.eq(ST[i], model.max(C[j], data.releaseTime[i]));
-					model.add(model.ifThen(jBeforeI , STiConstraint));				
+					expr = model.diff(expr, model.prod(data.setup[j][i], y[j][i]));
+				}				
+			}
+			model.addGe(expr, ST[i]);
+		}	
+		
+		//STi:Eq2
+		for(int j = 0 ; j < data.jobs-1; j ++) {//j=0,...,n				
+			for(int i = 1 ; i < data.jobs; i ++) {//i=1,...,n+1		
+				if(i != j) {
+					IloNumExpr expr = model.sum(C[j], model.prod(data.deadline[j], model.diff(y[j][i], 1)));
+					model.addLe(expr, ST[i]);
 				}
 			}			
 		}		
+		
+		//STi:Eq3
+		for(int i = 1 ; i < data.jobs-1; i ++) {		
+			model.addLe(model.prod(data.releaseTime[i], I[i]), ST[i]);
+		}							
 		
 		//Paper Eq2.
 		for(int k = 1 ; k < data.intervalEndTime.length; k ++) {		
@@ -422,23 +426,6 @@ public class OASTOUCplex {
 			}
 			model.addLe(expr, data.intervalEndTime[k]-data.intervalEndTime[k-1], "TOU-xik");
 		}
-		//Paper Eq3.
-//		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1		
-//			IloNumExpr expr = model.numExpr();
-//			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {						
-//				expr = model.sum(expr, model.prod(I[i], x[i][k]));	
-//			}						
-//			model.addGe(expr, model.sum(0.01, model.diff(C[i], ST[i])), "TOU-Eq3");
-//		}		
-		//TOU2
-//		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
-//			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {
-//				IloNumExpr expr = model.min(C[i], data.intervalEndTime[k]);
-//				IloNumExpr expr2 = model.max(ST[i], data.intervalEndTime[k-1]);
-//				expr = model.diff(expr, expr2);		
-//				model.addGe(x[i][k], expr, "TOU2");
-//			}	
-//		}			
 		
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
 			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {						
@@ -563,60 +550,61 @@ public class OASTOUCplex {
 		System.out.println("cplex procedure###########################");
 		OASTOUCplex cplex = new OASTOUCplex(data);
 		cplex.build_model(executeSeconds);
-		cplex.buildTOU(cplex.model);		
-		/*	
+		cplex.buildTOU(cplex.model);
+//		cplex.buildTOUNewConstraints(cplex.model);
+		
 //		cplex.model.exportModel("OASmodel.lp");						
 //		cplex.solveRelaxation();
 		cplex.solve();
 //		cplex.solution.fesible();
 //		System.out.println(cplex.model);		
-//		cplex.printResults(cplex.model);
+		cplex.printResults(cplex.model);
 //		System.out.println();
 		
 //		System.out.println("\ngetMIPRelativeGap: "+cplex.model.getMIPRelativeGap());
 		cplex_time2 = System.nanoTime();
 		cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
-		System.out.println(cplex.model.getObjValue()+ "," + cplex.model.getBestObjValue()+ "," 
+		System.out.println("\n"+cplex.model.getObjValue()+ "," + cplex.model.getBestObjValue()+ "," 
 				+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes);
-*/
+
 		int nJobs[] = new int[] {10, 15, 20, 25, 50, 100};//10, 15, 20, 25, 50, 100
 		int Tao[] = new int[] {1, 3, 5, 7, 9};
 		int R[] = new int[] {1, 3, 5, 7, 9};
 		String results = "";
 		
-		for(int i = 0 ; i < nJobs.length; i++) {
-			for(int j = 0 ; j < Tao.length; j++) {
-				for(int k = 0 ; k < R.length; k++) {
-					for(int repl = 1; repl <= 10; repl++) {
-						OASpath = "SingleMachineOASWithTOU/"+nJobs[i]+"orders/Tao"+Tao[j]+"/R"+R[k]
-								+"/Dataslack_"+nJobs[i]+"orders_Tao"+Tao[j]+"R"+R[k]+"_"+repl+".txt";
-						data = new Data();
-						data.process_OAS(OASpath,data,nJobs[i]+2);						
-						executeSeconds = nJobs[i]*60;
-						
-						if(nJobs[i] == 100) {
-							executeSeconds = 3600;
-						}
-						
-						cplex_time1 = System.nanoTime();
-						cplex = new OASTOUCplex(data);
-						cplex.build_model(executeSeconds);
-						cplex.buildTOU(cplex.model);	
-						cplex.solveRelaxation();
-						cplex.addSolution(cplex.model);						
-						cplex.solve();
-						cplex_time2 = System.nanoTime();
-						cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
-						results = nJobs[i]+"-Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+ cplex.model.getObjValue()+ "," 
-								+ cplex.model.getBestObjValue()+ "," 
-								+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes+"\n";
-						System.out.println(results);
-						fileWrite1 fileWriter = new fileWrite1();
-						fileWriter.writeToFile(results, "OAS-TOU-MILP-Solutions.txt");
-						fileWriter.run();
-					}
-				}				
-			}
-		}//end for
+//		for(int i = 0 ; i < nJobs.length; i++) {
+//			for(int j = 0 ; j < Tao.length; j++) {
+//				for(int k = 0 ; k < R.length; k++) {
+//					for(int repl = 1; repl <= 10; repl++) {
+//						OASpath = "SingleMachineOASWithTOU/"+nJobs[i]+"orders/Tao"+Tao[j]+"/R"+R[k]
+//								+"/Dataslack_"+nJobs[i]+"orders_Tao"+Tao[j]+"R"+R[k]+"_"+repl+".txt";
+//						data = new Data();
+//						data.process_OAS(OASpath,data,nJobs[i]+2);						
+//						executeSeconds = nJobs[i]*60;
+//						
+//						if(nJobs[i] == 100) {
+//							executeSeconds = 3600;
+//						}
+//						
+//						cplex_time1 = System.nanoTime();
+//						cplex = new OASTOUCplex(data);
+//						cplex.build_model(executeSeconds);
+//						cplex.buildTOU(cplex.model);	
+//						cplex.solveRelaxation();
+//						cplex.addSolution(cplex.model);						
+//						cplex.solve();
+//						cplex_time2 = System.nanoTime();
+//						cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
+//						results = nJobs[i]+"-Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+ cplex.model.getObjValue()+ "," 
+//								+ cplex.model.getBestObjValue()+ "," 
+//								+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes+"\n";
+//						System.out.println(results);
+//						fileWrite1 fileWriter = new fileWrite1();
+//						fileWriter.writeToFile(results, "OAS-TOU-MILP-Solutions.txt");
+//						fileWriter.run();
+//					}
+//				}				
+//			}
+//		}//end for
 	}	
 }

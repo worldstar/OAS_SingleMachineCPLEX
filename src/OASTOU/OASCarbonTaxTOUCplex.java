@@ -420,19 +420,31 @@ public class OASCarbonTaxTOUCplex {
 	}
 	
 	public void buildTOU(IloCplex model) throws UnknownObjectException, IloException {
-		//ST
-		for(int i = 0 ; i < data.jobs; i ++) {//i=1,...,n+1					
-			for(int j = 0 ; j < data.jobs; j ++) {		
+		//STi:Eq1
+		for(int i = 1 ; i < data.jobs; i ++) {//i=1,...,n+1		
+			IloNumExpr expr = model.diff(C[i], model.prod(I[i], data.processingTime[i]));
+			for(int j = 0 ; j < data.jobs-1; j ++) {//j=0,...,n	
 				if(i != j) {
-					IloConstraint ifStatements[] = new IloConstraint[3];
-					ifStatements[0] = model.eq(I[i], 1);
-					ifStatements[1] = model.eq(y[j][i], 1);
-					IloConstraint jBeforeI = model.and(ifStatements);						
-					IloConstraint STiConstraint = model.eq(ST[i], model.max(C[j], data.releaseTime[i]));
-					model.add(model.ifThen(jBeforeI , STiConstraint));										
+					expr = model.diff(expr, model.prod(data.setup[j][i], y[j][i]));
+				}				
+			}
+			model.addGe(expr, ST[i]);
+		}	
+		
+		//STi:Eq2
+		for(int j = 0 ; j < data.jobs-1; j ++) {//j=0,...,n				
+			for(int i = 1 ; i < data.jobs; i ++) {//i=1,...,n+1		
+				if(i != j) {
+					IloNumExpr expr = model.sum(C[j], model.prod(data.deadline[j], model.diff(y[j][i], 1)));
+					model.addLe(expr, ST[i]);
 				}
 			}			
 		}		
+		
+		//STi:Eq3
+		for(int i = 1 ; i < data.jobs-1; i ++) {		
+			model.addLe(model.prod(data.releaseTime[i], I[i]), ST[i]);
+		}			
 		
 		//Paper Eq2.
 		for(int k = 1 ; k < data.intervalEndTime.length; k ++) {		
@@ -604,7 +616,7 @@ public class OASCarbonTaxTOUCplex {
 		cplex.solve();
 //		cplex.solution.fesible();
 //		System.out.println(cplex.model);		
-		cplex.printResults(cplex.model);
+//		cplex.printResults(cplex.model);
 //		System.out.println();
 		
 //		System.out.println("\ngetMIPRelativeGap: "+cplex.model.getMIPRelativeGap());
