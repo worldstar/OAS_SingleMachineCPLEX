@@ -191,7 +191,7 @@ public class OASTOUCplex {
 		}										
 		
 		System.out.print("\nXik \n");
-		for(int k = 1 ; k < data.EC.length-2; k++) {
+		for(int k = 1 ; k < data.EC.length; k++) {
 			for(int i = 0; i < data.jobs; i++) {
 				if(i == 0) System.out.print(" ");
 				System.out.print(model.getValue(x[i][k])+" ");			
@@ -428,7 +428,7 @@ public class OASTOUCplex {
 		}
 		
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
-			for(int k = 1 ; k < 2; k ++) {						
+			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {						
 				//theSameZoneCondition	
 				IloConstraint ifStatements[] = new IloConstraint[3];
 				ifStatements[0] = model.eq(I[i], 1);
@@ -447,25 +447,29 @@ public class OASTOUCplex {
 				IloConstraint zoneCondition2 = model.and(ifStatements2);												
 				IloConstraint timeCalc2 = model.le(x[i][k], model.diff(data.intervalEndTime[k], ST[i]));
 				model.add(model.ifThen(zoneCondition2 , timeCalc2));		
-
 				
 				//Across two time zones: For the part of bk to Ci
-				zoneCondition = model.and(model.le(ST[i], data.intervalEndTime[k-1]), model.and(model.ge(C[i], data.intervalEndTime[k-1]), model.le(C[i], data.intervalEndTime[k])));				
+				IloConstraint ifStatements3[] = new IloConstraint[4];
+				ifStatements3[0] = model.eq(I[i], 1);
+				ifStatements3[1] = model.le(ST[i], data.intervalEndTime[k-1]);
+				ifStatements3[2] = model.ge(C[i], data.intervalEndTime[k-1]);
+				ifStatements3[3] = model.le(C[i], data.intervalEndTime[k]);
+				
+				IloConstraint zoneCondition3 = model.and(ifStatements3);				
 				timeCalc = model.le(x[i][k], model.diff(C[i], data.intervalEndTime[k-1]));
-				model.add(model.ifThen(zoneCondition , timeCalc));	
-
+				model.add(model.ifThen(zoneCondition3 , timeCalc));	
+				
+				//Rejected order xik = 0
+				IloConstraint ifStatements4[] = new IloConstraint[1];
+				ifStatements4[0] = model.eq(I[i], 0);
+				IloConstraint zoneCondition4 = model.and(ifStatements4);												
+				IloConstraint timeCalc3 = model.le(x[i][k], 0);
+				model.add(model.ifThen(zoneCondition4 , timeCalc3));		
 				
 //				model.addLe(x[i][k], model.diff(C[i], ST[i]));
 //				model.addLe(x[i][k], model.diff(data.intervalEndTime[k], ST[i]));
 //				model.addLe(x[i][k], model.diff(C[i], data.intervalEndTime[k-1]));	
-//				model.addGe(x[i][k], 0);		
-				
-				//Rejected order xik = 0
-				IloConstraint ifStatements3[] = new IloConstraint[1];
-				ifStatements3[0] = model.eq(I[i], 0);
-				IloConstraint zoneCondition3 = model.and(ifStatements3);												
-				IloConstraint timeCalc3 = model.le(x[i][k], 0);
-				model.add(model.ifThen(zoneCondition3 , timeCalc3));						
+//				model.addGe(x[i][k], 0);					
 			}	
 		}
 				
@@ -544,13 +548,13 @@ public class OASTOUCplex {
 	 */
 	public static void main(String[] args) throws Exception {
 		Data data = new Data();
-		int jobs = 12;//所有點個數，包括0，n+1兩個虛擬訂單
+		int jobs = 17;//所有點個數，包括0，n+1兩個虛擬訂單
 		int executeSeconds = (int)(jobs*60);
 		double cplex_time1 = System.nanoTime();
 		double cplex_time2 = 0, cplex_time = 0;
 		//讀入不同的測試案例
 //		String OASpath = "SingleMachineOAS/10orders/Tao1/R1/Dataslack_10orders_Tao1R1_1.txt";
-		String OASpath = "SingleMachineOASWithTOU/10orders/Tao1/R1/Dataslack_10orders_Tao1R1_1.txt";
+		String OASpath = "SingleMachineOASWithTOU/15orders/Tao9/R9/Dataslack_15orders_Tao9R9_1.txt";
 				
 		data.process_OAS(OASpath,data,jobs);
 		System.out.println("input succesfully: \n"+OASpath);
