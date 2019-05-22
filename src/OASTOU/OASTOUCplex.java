@@ -31,6 +31,7 @@ public class OASTOUCplex {
 	public IloNumVar[] C; //完工時間矩陣
 	Solution solution;
 	double cost; //目標值object
+	double maxDeadline = 0;
 	
 	public IloNumVar[][] y;	//if order i is before order j
 	public IloNumVar[] I;	//if order i is selected
@@ -151,7 +152,11 @@ public class OASTOUCplex {
 			System.out.print(data.releaseTime[i]+" ");			
 		}			
 		System.out.print ("\nSTi ");
-		for(int i = 0; i < data.jobs; i++) {
+		for(int i = 0; i < data.jobs-1; i++) {
+			if(i==0) {
+				System.out.print("0 ");
+				continue;
+			}
 			System.out.print(model.getValue(ST[i])+" ");			
 		}	
 		System.out.print("\nPi ");
@@ -265,8 +270,7 @@ public class OASTOUCplex {
 			}
 			ST[i] = model.numVar(0, data.deadline[i]-data.processingTime[i], IloNumVarType.Float, "ST" + i);	
 		}				
-
-		double maxDeadline = 0;
+		
 		for(int i = 1 ; i < data.deadline.length -1; i++) {
 			if(maxDeadline < data.deadline[i]) {
 				maxDeadline = data.deadline[i];
@@ -404,14 +408,14 @@ public class OASTOUCplex {
 		}	
 		
 		//STi:Eq2
-		for(int j = 0 ; j < data.jobs-1; j ++) {//j=0,...,n				
-			for(int i = 1 ; i < data.jobs; i ++) {//i=1,...,n+1		
-				if(i != j) {
-					IloNumExpr expr = model.sum(C[j], model.prod(data.deadline[j], model.diff(y[j][i], 1)));
-					model.addLe(expr, ST[i]);
-				}
-			}			
-		}		
+//		for(int j = 0 ; j < data.jobs-1; j ++) {//j=0,...,n				
+//			for(int i = 1 ; i < data.jobs; i ++) {//i=1,...,n+1		
+//				if(i != j) {
+//					IloNumExpr expr = model.sum(C[j], model.prod(data.deadline[j], model.diff(y[j][i], 1)));
+//					model.addLe(expr, ST[i]);
+//				}
+//			}			
+//		}		
 		
 		//STi:Eq3
 		for(int i = 1 ; i < data.jobs-1; i ++) {		
@@ -420,7 +424,7 @@ public class OASTOUCplex {
 		
 		//Paper Eq2.
 		for(int k = 1 ; k < data.intervalEndTime.length; k ++) {		
-			IloNumExpr expr = model.numExpr();		
+			IloNumExpr expr = model.numExpr();					
 			for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
 				expr = model.sum(expr, x[i][k]);				
 			}
@@ -430,24 +434,30 @@ public class OASTOUCplex {
 		for(int i= 1; i < data.jobs-1;i++){//i=1,...,n	
 			IloNumExpr expr = model.numExpr();
 			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {	
+				if(data.deadline[i] < data.intervalEndTime[k-1]) {
+					break;
+				}				
 				expr = model.sum(expr, x[i][k]);
 			}
 			model.addGe(expr, model.diff(C[i], ST[i]));
 		}
 		
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
-			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {						
+			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {	
+				if(data.deadline[i] < data.intervalEndTime[k-1]) {
+					break;
+				}
 				model.addGe(x[i][k], model.diff(model.min(C[i], model.prod(I[i], data.intervalEndTime[k])), 
 						model.max(ST[i], model.prod(I[i], data.intervalEndTime[k-1]))));	
-				/*
-				IloNumVar End = model.numVar(0, 1E8, IloNumVarType.Float, "End" + i + "," + k);
-				IloNumVar Start = model.numVar(0, 1E8, IloNumVarType.Float, "Start" + i + "," + k);
 				
-				model.addLe(End, C[i]);
-				model.addLe(End, model.prod(I[i], data.intervalEndTime[k]));
-				model.addGe(Start, ST[i]);
-				model.addGe(Start, model.prod(I[i], data.intervalEndTime[k-1]));
-				model.addGe(x[i][k], model.diff(End, Start));*/
+//				IloNumVar End = model.numVar(0, 1E8, IloNumVarType.Float, "End" + i + "," + k);
+//				IloNumVar Start = model.numVar(0, 1E8, IloNumVarType.Float, "Start" + i + "," + k);
+//				
+//				model.addLe(End, C[i]);
+//				model.addLe(End, model.prod(I[i], data.intervalEndTime[k]));
+//				model.addGe(Start, ST[i]);
+//				model.addGe(Start, model.prod(I[i], data.intervalEndTime[k-1]));
+//				model.addGe(x[i][k], model.diff(End, Start));
 			}	
 		}
 		
