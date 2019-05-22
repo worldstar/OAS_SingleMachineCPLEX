@@ -427,52 +427,30 @@ public class OASTOUCplex {
 			model.addLe(expr, data.intervalEndTime[k]-data.intervalEndTime[k-1], "TOU-xik");
 		}
 		
+		for(int i= 1; i < data.jobs-1;i++){//i=1,...,n	
+			IloNumExpr expr = model.numExpr();
+			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {	
+				expr = model.sum(expr, x[i][k]);
+			}
+			model.addGe(expr, model.diff(C[i], ST[i]));
+		}
+		
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
 			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {						
-				//theSameZoneCondition	
-				IloConstraint ifStatements[] = new IloConstraint[3];
-				ifStatements[0] = model.eq(I[i], 1);
-				ifStatements[1] = model.ge(ST[i], data.intervalEndTime[k-1]);
-				ifStatements[2] = model.le(C[i], data.intervalEndTime[k]);
-				IloConstraint zoneCondition = model.and(ifStatements);				
-				//Please notice the le and eq of the xik. eq will let the STi = Ci
-				IloConstraint timeCalc = model.ge(x[i][k], model.diff(C[i], ST[i]));
-				model.add(model.ifThen(zoneCondition , timeCalc));
+				model.addGe(x[i][k], model.diff(model.min(C[i], model.prod(I[i], data.intervalEndTime[k])), 
+						model.max(ST[i], model.prod(I[i], data.intervalEndTime[k-1]))));	
+				/*
+				IloNumVar End = model.numVar(0, 1E8, IloNumVarType.Float, "End" + i + "," + k);
+				IloNumVar Start = model.numVar(0, 1E8, IloNumVarType.Float, "Start" + i + "," + k);
 				
-				//Across two time zones: For the part of ST to bk
-				IloConstraint ifStatements2[] = new IloConstraint[3];
-				ifStatements2[0] = model.eq(I[i], 1);
-				ifStatements2[1] = model.ge(ST[i], data.intervalEndTime[k-1]);
-				ifStatements2[2] = model.ge(C[i], data.intervalEndTime[k]);
-				IloConstraint zoneCondition2 = model.and(ifStatements2);												
-				IloConstraint timeCalc2 = model.le(x[i][k], model.diff(data.intervalEndTime[k], ST[i]));
-				model.add(model.ifThen(zoneCondition2 , timeCalc2));		
-				
-				//Across two time zones: For the part of bk to Ci
-				IloConstraint ifStatements3[] = new IloConstraint[4];
-				ifStatements3[0] = model.eq(I[i], 1);
-				ifStatements3[1] = model.le(ST[i], data.intervalEndTime[k-1]);
-				ifStatements3[2] = model.ge(C[i], data.intervalEndTime[k-1]);
-				ifStatements3[3] = model.le(C[i], data.intervalEndTime[k]);
-				
-				IloConstraint zoneCondition3 = model.and(ifStatements3);				
-				timeCalc = model.le(x[i][k], model.diff(C[i], data.intervalEndTime[k-1]));
-				model.add(model.ifThen(zoneCondition3 , timeCalc));	
-				
-				//Rejected order xik = 0
-				IloConstraint ifStatements4[] = new IloConstraint[1];
-				ifStatements4[0] = model.eq(I[i], 0);
-				IloConstraint zoneCondition4 = model.and(ifStatements4);												
-				IloConstraint timeCalc3 = model.le(x[i][k], 0);
-				model.add(model.ifThen(zoneCondition4 , timeCalc3));		
-				
-//				model.addLe(x[i][k], model.diff(C[i], ST[i]));
-//				model.addLe(x[i][k], model.diff(data.intervalEndTime[k], ST[i]));
-//				model.addLe(x[i][k], model.diff(C[i], data.intervalEndTime[k-1]));	
-//				model.addGe(x[i][k], 0);					
+				model.addLe(End, C[i]);
+				model.addLe(End, model.prod(I[i], data.intervalEndTime[k]));
+				model.addGe(Start, ST[i]);
+				model.addGe(Start, model.prod(I[i], data.intervalEndTime[k-1]));
+				model.addGe(x[i][k], model.diff(End, Start));*/
 			}	
 		}
-				
+		
 //		//公式(9) with TOU. R[i] minus the electricity cost.
 		for(int i= 1; i < data.jobs-1;i++){//i=1,...,n	
 			IloNumExpr expr = model.diff(model.prod(data.profit[i], I[i]), model.prod(T[i], data.weight[i]));
@@ -548,13 +526,13 @@ public class OASTOUCplex {
 	 */
 	public static void main(String[] args) throws Exception {
 		Data data = new Data();
-		int jobs = 17;//所有點個數，包括0，n+1兩個虛擬訂單
+		int jobs = 12;//所有點個數，包括0，n+1兩個虛擬訂單
 		int executeSeconds = (int)(jobs*60);
 		double cplex_time1 = System.nanoTime();
 		double cplex_time2 = 0, cplex_time = 0;
 		//讀入不同的測試案例
 //		String OASpath = "SingleMachineOAS/10orders/Tao1/R1/Dataslack_10orders_Tao1R1_1.txt";
-		String OASpath = "SingleMachineOASWithTOU/15orders/Tao9/R9/Dataslack_15orders_Tao9R9_1.txt";
+		String OASpath = "SingleMachineOASWithTOU/10orders/Tao1/R1/Dataslack_10orders_Tao1R1_1.txt";
 				
 		data.process_OAS(OASpath,data,jobs);
 		System.out.println("input succesfully: \n"+OASpath);
@@ -579,8 +557,8 @@ public class OASTOUCplex {
 				+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes);
 
 		int nJobs[] = new int[] {10, 15, 20, 25, 50, 100};//10, 15, 20, 25, 50, 100
-		int Tao[] = new int[] {1, 3, 5, 7, 9};
-		int R[] = new int[] {1, 3, 5, 7, 9};
+		int Tao[] = new int[] {1, 5, 9};
+		int R[] = new int[] {1, 5, 9};
 		String results = "";
 		
 //		for(int i = 0 ; i < nJobs.length; i++) {
