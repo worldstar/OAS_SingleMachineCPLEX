@@ -3,14 +3,12 @@ import java.io.BufferedReader;
 import java.io.*;
 import java.util.ArrayList;
 
-import ilog.concert.IloConstraint;
 import ilog.concert.IloConversion;
 import ilog.concert.IloException;
 import ilog.concert.IloNumExpr;
 import ilog.concert.IloNumVar;
 import ilog.concert.IloNumVarType;
 import ilog.concert.IloObjective;
-import ilog.concert.IloObjectiveSense;
 import ilog.cplex.IloCplex;
 import ilog.cplex.IloCplex.MultiObjIntInfo;
 import ilog.cplex.IloCplex.MultiObjNumInfo;
@@ -29,7 +27,7 @@ import util.fileWrite1;
  * Energy-conscious flow shop scheduling under time-of-use electricity tariffs. CIRP Annals, 63(1), 37-40.
  * We assume we should complete the work before 24:00PM. Thus, the last job C[n+1] <= 1440.
  */
-public class OASCarbonTaxCplex {
+public class OASCarbonTaxTOUSingleObjCplex {
 	Data data; //定義類Data的對象
 	IloCplex model; //定義cplex內部類的對象
 	public IloNumVar[] C; //完工時間矩陣
@@ -50,9 +48,8 @@ public class OASCarbonTaxCplex {
 //	public IloNumVar[] CO2Qty;	//CO2 emission of each order
 	
 	IloObjective obj;
-	IloObjective objCO2;	
 	
-	public OASCarbonTaxCplex(Data data) {
+	public OASCarbonTaxTOUSingleObjCplex(Data data) {
 		this.data = data;
 	}
 	//函數功能：解模型，並生成排程順序和得到目標值
@@ -170,7 +167,7 @@ public class OASCarbonTaxCplex {
 			System.out.print(data.processingTime[i]+" ");			
 		}		
 		System.out.print("\nSji ");
-		for(int i = 0; i < data.jobs; i++) {
+		for(int i = 1; i < data.jobs; i++) {
 			double tempSetup = 0;
 			for(int j = 0; j < data.jobs-1; j ++) {
 				if(i != j && model.getValue(y[j][i]) == 1) {
@@ -181,10 +178,10 @@ public class OASCarbonTaxCplex {
 			System.out.print(tempSetup+" ");					
 		}			
 		System.out.print("\n(Pi+Sji) ");
-		for(int i = 0; i < data.jobs; i++) {
+		for(int i = 1; i < data.jobs; i++) {
 			if(model.getValue(I[i])== 1){
 				double tempSum = data.processingTime[i];
-				for(int j = 0 ; j < data.jobs; j++) {
+				for(int j = 0 ; j < data.jobs-1; j++) {
 					if(i != j && model.getValue(y[j][i]) == 1) {
 						tempSum += data.setup[j][i];
 					}
@@ -202,13 +199,22 @@ public class OASCarbonTaxCplex {
 		}										
 		
 		System.out.print("\nXik \n");
-		for(int k = 1 ; k < data.EC.length-2; k++) {
-			for(int i = 0; i < data.jobs; i++) {
+		for(int k = 1 ; k < data.EC.length; k++) {
+			for(int i = 1; i < data.jobs-1; i++) {
 				if(i == 0) System.out.print(" ");
 				System.out.print(model.getValue(x[i][k])+" ");			
 			}	
 			System.out.println("");
 		}		
+		
+		System.out.print("\nzik \n");
+		for(int k = 1 ; k < data.CO2IntervalEndTime.length; k++) {
+			for(int i = 1; i < data.jobs-1; i++) {
+				if(i == 0) System.out.print(" ");
+				System.out.print(model.getValue(z[i][k])+" ");			
+			}	
+			System.out.println("");
+		}			
 		
 		System.out.print("\nPower(i) ");
 		for(int i = 0; i < data.jobs; i++) {
@@ -226,15 +232,7 @@ public class OASCarbonTaxCplex {
 		for(int i = 1; i < data.jobs-1; i++) {
 			System.out.print(model.getValue(R[i])+" ");			
 		}
-		
-		System.out.print("\nzik \n");
-		for(int k = 1 ; k < data.EC.length-2; k++) {
-			for(int i = 0; i < data.jobs; i++) {
-				if(i == 0) System.out.print(" ");
-				System.out.print(model.getValue(z[i][k])+" ");			
-			}	
-			System.out.println("");
-		}			
+		System.out.print("\n");
 	}
 	//函數功能：根據OAS Single machine數學模型建立CPLEX模型
 	/**
@@ -432,111 +430,94 @@ public class OASCarbonTaxCplex {
 		}	
 		
 		//STi:Eq2
-		for(int j = 0 ; j < data.jobs-1; j ++) {//j=0,...,n				
-			for(int i = 1 ; i < data.jobs; i ++) {//i=1,...,n+1		
-				if(i != j) {
-					IloNumExpr expr = model.sum(C[j], model.prod(data.deadline[j], model.diff(y[j][i], 1)));
-					model.addLe(expr, ST[i]);
-				}
-			}			
-		}		
+//		for(int j = 0 ; j < data.jobs-1; j ++) {//j=0,...,n				
+//			for(int i = 1 ; i < data.jobs; i ++) {//i=1,...,n+1		
+//				if(i != j) {
+//					IloNumExpr expr = model.sum(C[j], model.prod(data.deadline[j], model.diff(y[j][i], 1)));
+//					model.addLe(expr, ST[i]);
+//				}
+//			}			
+//		}		
 		
 		//STi:Eq3
 		for(int i = 1 ; i < data.jobs-1; i ++) {		
 			model.addLe(model.prod(data.releaseTime[i], I[i]), ST[i]);
 		}	
 		
-		//Paper Eq2.
-//		for(int k = 1 ; k < data.intervalEndTime.length; k ++) {		
-//			IloNumExpr expr = model.numExpr();		
-//			for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
-//				expr = model.sum(expr, x[i][k]);				
-//			}
-//			model.addLe(expr, data.intervalEndTime[k]-data.intervalEndTime[k-1], "TOU-xik");
-//		}	
-//		
-//		for(int k = 1 ; k < data.CO2IntervalEndTime.length; k ++) {		
-//			IloNumExpr expr = model.numExpr();		
-//			for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
-//				expr = model.sum(expr, z[i][k]);				
-//			}
-//			model.addLe(expr, data.CO2IntervalEndTime[k]-data.CO2IntervalEndTime[k-1], "CO2-zik");
-//		}		
+//		Paper Eq2.
+		for(int k = 1 ; k < data.intervalEndTime.length; k ++) {		
+			IloNumExpr expr = model.numExpr();		
+			for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
+				expr = model.sum(expr, x[i][k]);				
+			}
+			model.addLe(expr, data.intervalEndTime[k]-data.intervalEndTime[k-1], "TOU-xik");
+		}	
+		
+		for(int k = 1 ; k < data.CO2IntervalEndTime.length; k ++) {		
+			IloNumExpr expr = model.numExpr();		
+			for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
+				expr = model.sum(expr, z[i][k]);				
+			}
+			model.addLe(expr, data.CO2IntervalEndTime[k]-data.CO2IntervalEndTime[k-1], "CO2-zik");
+		}		
+		
+		//Keep integrity of the xik
+		for(int i= 1; i < data.jobs-1;i++){//i=1,...,n	
+			IloNumExpr expr = model.numExpr();
+			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {	
+				if(data.releaseTime[i] > data.intervalEndTime[k]) {
+					continue;
+				}				
+				if(data.deadline[i] < data.intervalEndTime[k-1]) {
+					break;
+				}				
+				expr = model.sum(expr, x[i][k]);
+			}
+			model.addGe(expr, model.diff(C[i], ST[i]));
+		}		
+		
+		//Keep integrity of the zik
+		for(int i= 1; i < data.jobs-1;i++){//i=1,...,n	
+			IloNumExpr expr = model.numExpr();
+			for(int k = 1 ; k < data.CO2IntervalEndTime.length; k ++) {	
+				if(data.releaseTime[i] > data.CO2IntervalEndTime[k]) {
+					continue;
+				}				
+				if(data.deadline[i] < data.CO2IntervalEndTime[k-1]) {
+					break;
+				}				
+				expr = model.sum(expr, z[i][k]);
+			}
+			model.addGe(expr, model.diff(C[i], ST[i]));
+		}			
 		
 		//TOU
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
 			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {						
-				//theSameZoneCondition	
-				IloConstraint ifStatements[] = new IloConstraint[3];
-				ifStatements[0] = model.eq(I[i], 1);
-				ifStatements[1] = model.ge(ST[i], data.intervalEndTime[k-1]);
-				ifStatements[2] = model.le(C[i], data.intervalEndTime[k]);
-				IloConstraint zoneCondition = model.and(ifStatements);				
-				//Please notice the le and eq of the xik. eq will let the STi = Ci
-				IloConstraint timeCalc = model.ge(x[i][k], model.diff(C[i], ST[i]));
-				model.add(model.ifThen(zoneCondition , timeCalc));
+				if(data.releaseTime[i] > data.intervalEndTime[k]) {
+					continue;
+				}				
+				if(data.deadline[i] < data.intervalEndTime[k-1]) {
+					break;
+				}
 				
-				//Across two time zones: For the part of ST to bk
-				IloConstraint ifStatements2[] = new IloConstraint[3];
-				ifStatements2[0] = model.eq(I[i], 1);
-				ifStatements2[1] = model.ge(ST[i], data.intervalEndTime[k-1]);
-				ifStatements2[2] = model.ge(C[i], data.intervalEndTime[k]);
-				IloConstraint zoneCondition2 = model.and(ifStatements2);												
-				IloConstraint timeCalc2 = model.le(x[i][k], model.diff(data.intervalEndTime[k], ST[i]));
-				model.add(model.ifThen(zoneCondition2 , timeCalc2));		
-				
-				//Across two time zones: For the part of bk to Ci
-				zoneCondition = model.and(model.le(ST[i], data.intervalEndTime[k-1]), model.and(model.ge(C[i], data.intervalEndTime[k-1]), model.le(C[i], data.intervalEndTime[k])));				
-				timeCalc = model.le(x[i][k], model.diff(C[i], data.intervalEndTime[k-1]));
-				model.add(model.ifThen(zoneCondition , timeCalc));	
-				
-				//Rejected order xik = 0
-				IloConstraint ifStatements3[] = new IloConstraint[1];
-				ifStatements3[0] = model.eq(I[i], 0);
-				IloConstraint zoneCondition3 = model.and(ifStatements3);												
-				IloConstraint timeCalc3 = model.le(x[i][k], 0);
-				model.add(model.ifThen(zoneCondition3 , timeCalc3));						
+				model.addGe(x[i][k], model.diff(model.min(C[i], model.prod(I[i], data.intervalEndTime[k])), 
+						model.max(ST[i], model.prod(I[i], data.intervalEndTime[k-1]))));					
 			}	
 		}
 		
 		//CO2
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1			
-			for(int k = 1 ; k < data.CO2IntervalEndTime.length; k ++) {						
-				//theSameZoneCondition	
-				IloConstraint ifStatements[] = new IloConstraint[3];
-				ifStatements[0] = model.eq(I[i], 1);
-				ifStatements[1] = model.ge(ST[i], data.CO2IntervalEndTime[k-1]);
-				ifStatements[2] = model.le(C[i], data.CO2IntervalEndTime[k]);
-				IloConstraint zoneCondition = model.and(ifStatements);				
-				//Please notice the le and eq of the xik. eq will let the STi = Ci
-				IloConstraint timeCalc = model.eq(z[i][k], model.diff(C[i], ST[i]));
-				model.add(model.ifThen(zoneCondition , timeCalc));
+			for(int k = 1 ; k < data.CO2IntervalEndTime.length; k ++) {	
+				if(data.releaseTime[i] > data.CO2IntervalEndTime[k]) {
+					continue;
+				}				
+				if(data.deadline[i] < data.CO2IntervalEndTime[k-1]) {
+					break;
+				}
 				
-				//Across two time zones: For the first part of ST to bk
-				IloConstraint ifStatements2[] = new IloConstraint[3];
-				ifStatements2[0] = model.eq(I[i], 1);
-				ifStatements2[1] = model.ge(ST[i], data.CO2IntervalEndTime[k-1]);
-				ifStatements2[2] = model.ge(C[i], data.CO2IntervalEndTime[k]);
-				IloConstraint zoneCondition2 = model.and(ifStatements2);												
-				IloConstraint timeCalc2 = model.eq(z[i][k], model.diff(data.CO2IntervalEndTime[k], ST[i]));
-				model.add(model.ifThen(zoneCondition2 , timeCalc2));		
-				
-				//Across two time zones: For the part of bk to Ci
-				IloConstraint ifStatements3[] = new IloConstraint[4];
-				ifStatements3[0] = model.eq(I[i], 1);
-				ifStatements3[1] = model.le(ST[i], data.CO2IntervalEndTime[k-1]);
-				ifStatements3[2] = model.ge(C[i], data.CO2IntervalEndTime[k-1]);
-				ifStatements3[3] = model.le(C[i], data.CO2IntervalEndTime[k]);		
-				IloConstraint zoneCondition3 = model.and(ifStatements3);					
-				IloConstraint timeCalc3 = model.eq(z[i][k], model.diff(C[i], data.CO2IntervalEndTime[k-1]));
-				model.add(model.ifThen(zoneCondition3, timeCalc3));	
-				
-				//Rejected order xik = 0
-				IloConstraint ifStatements4[] = new IloConstraint[1];
-				ifStatements4[0] = model.eq(I[i], 0);
-				IloConstraint zoneCondition4 = model.and(ifStatements4);												
-				IloConstraint timeCalc4 = model.eq(z[i][k], 0);
-				model.add(model.ifThen(zoneCondition4 , timeCalc4));						
+				model.addGe(z[i][k], model.diff(model.min(C[i], model.prod(I[i], data.CO2IntervalEndTime[k])), 
+						model.max(ST[i], model.prod(I[i], data.CO2IntervalEndTime[k-1]))));					
 			}	
 		}		
 				
@@ -548,7 +529,7 @@ public class OASCarbonTaxCplex {
 			}			
 			
 			for(int k = 1 ; k < data.CO2IntervalEndTime.length; k ++) {					
-				expr = model.diff(expr, model.prod(z[i][k], data.CarbonTax*data.CO2Emission[k]/60));
+				expr = model.diff(expr, model.prod(z[i][k], data.CarbonTax*data.CO2Emission[k]*data.unitPowerConsumption[i]/60));
 			}				
 			model.addLe(R[i], expr, "Eq9CarbonTax");//Ri<=reveneuei*Ii-Ti*weight_i-xik*eck*power_i/60	
 		}			
@@ -607,69 +588,59 @@ public class OASCarbonTaxCplex {
 		data.process_OAS(OASpath,data,jobs);
 		System.out.println("input succesfully: \n"+OASpath);
 		System.out.println("cplex procedure###########################");
-		OASCarbonTaxCplex cplex = new OASCarbonTaxCplex(data);
+		OASCarbonTaxTOUSingleObjCplex cplex = new OASCarbonTaxTOUSingleObjCplex(data);
 		cplex.build_model(executeSeconds);
 		cplex.buildTOU(cplex.model);					
 //		cplex.model.exportModel("OASmodel.lp");						
 //		cplex.solveRelaxation();
-		cplex.solve();
+//		cplex.solve();
 //		cplex.solution.fesible();
 //		System.out.println(cplex.model);		
-//		cplex.printResults(cplex.model);//Should fix some printing problems later.
+//		cplex.printResults(cplex.model);
 //		System.out.println();
 		
 //		System.out.println("\ngetMIPRelativeGap: "+cplex.model.getMIPRelativeGap());
 		cplex_time2 = System.nanoTime();
 		cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
+		/*
 		System.out.println(cplex.model.getObjValue()+ "," + cplex.model.getBestObjValue()+ "," 
 				+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes);
-		/*
+		
 		*/
 		int nJobs[] = new int[] {10, 15, 20, 25, 50, 100};//10, 15, 20, 25, 50, 100
-		int Tao[] = new int[] {1, 3, 5, 7, 9};
-		int R[] = new int[] {1, 3, 5, 7, 9};
+		int Tao[] = new int[] {1, 5, 9};
+		int R[] = new int[] {1, 5, 9};
 		String results = "";
 		
-//		for(int i = 0 ; i < nJobs.length; i++) {
-//			for(int j = 0 ; j < Tao.length; j++) {
-//				for(int k = 0 ; k < R.length; k++) {
-//					for(int repl = 1; repl <= 10; repl++) {
-//						OASpath = "SingleMachineOASWithTOU/"+nJobs[i]+"orders/Tao"+Tao[j]+"/R"+R[k]
-//								+"/Dataslack_"+nJobs[i]+"orders_Tao"+Tao[j]+"R"+R[k]+"_"+repl+".txt";
-//						data = new Data();
-//						data.process_OAS(OASpath,data,nJobs[i]+2);						
-//						executeSeconds = 3600;
-//						cplex_time1 = System.nanoTime();
-//						cplex = new OASCarbonTaxTOUCplex(data);
-//						cplex.build_model(executeSeconds);
-//						cplex.buildTOU(cplex.model);	
+		for(int i = 0 ; i < nJobs.length; i++) {
+			for(int j = 0 ; j < Tao.length; j++) {
+				for(int k = 0 ; k < R.length; k++) {
+					for(int repl = 1; repl <= 1; repl++) {
+						OASpath = "SingleMachineOASWithTOU/"+nJobs[i]+"orders/Tao"+Tao[j]+"/R"+R[k]
+								+"/Dataslack_"+nJobs[i]+"orders_Tao"+Tao[j]+"R"+R[k]+"_"+repl+".txt";
+						data = new Data();
+						data.process_OAS(OASpath,data,nJobs[i]+2);						
+						executeSeconds = 3600;
+						cplex_time1 = System.nanoTime();
+						cplex = new OASCarbonTaxTOUSingleObjCplex(data);
+						cplex.build_model(executeSeconds);
+						cplex.buildTOU(cplex.model);	
 //						cplex.solveRelaxation();
 //						cplex.addSolution(cplex.model);
-//						cplex.solve();
-//						cplex_time2 = System.nanoTime();
-//						cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
-//						results = nJobs[i]+"-Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+ cplex.model.getObjValue()+ "," 
-//								+ cplex.model.getBestObjValue()+ "," 
-//								+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes+"\n";
-//						System.out.println(results);
-//						
-//				         // Print the values of the various objectives.
-//				         System.out.println("Objective values...");
-//				         for (int solns = 0; solns < cplex.model.getMultiObjNsolves(); ++solns) {
-//				            System.out.printf("Objective priority %d value = %f%n",
-//				            		cplex.model.getMultiObjInfo(MultiObjIntInfo.MultiObjPriority, solns),
-//				            		cplex.model.getMultiObjInfo(MultiObjNumInfo.MultiObjObjValue, i));
-//				         }					
-//				         System.out.println("cplex.model.getMultiObjNsolves(): "+cplex.model.getMultiObjNsolves());
-//				         System.out.println(cplex.model.getValue(cplex.obj.getExpr(), -1));
-//				         System.out.println(cplex.model.getValue(cplex.objCO2.getExpr(), -1));
-//						
-//						fileWrite1 fileWriter = new fileWrite1();
-//						fileWriter.writeToFile(results, "OAS-CO2Only-MILP-Solutions.txt");
-//						fileWriter.run();
-//					}
-//				}				
-//			}
-//		}//end for
+						cplex.solve();
+						cplex_time2 = System.nanoTime();
+						cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
+						results = nJobs[i]+"-Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+ cplex.model.getObjValue()+ "," 
+								+ cplex.model.getBestObjValue()+ "," 
+								+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes+"\n";
+						System.out.println(results);
+						
+						fileWrite1 fileWriter = new fileWrite1();
+						fileWriter.writeToFile(results, "OAS-CO2TaxTOU-MILP-Solutions.txt");
+						fileWriter.run();
+					}
+				}				
+			}
+		}//end for
 	}	
 }

@@ -432,14 +432,14 @@ public class OASCarbonTaxTOUCplex {
 		}	
 		
 		//STi:Eq2
-		for(int j = 0 ; j < data.jobs-1; j ++) {//j=0,...,n				
-			for(int i = 1 ; i < data.jobs; i ++) {//i=1,...,n+1		
-				if(i != j) {
-					IloNumExpr expr = model.sum(C[j], model.prod(data.deadline[j], model.diff(y[j][i], 1)));
-					model.addLe(expr, ST[i]);
-				}
-			}			
-		}		
+//		for(int j = 0 ; j < data.jobs-1; j ++) {//j=0,...,n				
+//			for(int i = 1 ; i < data.jobs; i ++) {//i=1,...,n+1		
+//				if(i != j) {
+//					IloNumExpr expr = model.sum(C[j], model.prod(data.deadline[j], model.diff(y[j][i], 1)));
+//					model.addLe(expr, ST[i]);
+//				}
+//			}			
+//		}		
 		
 		//STi:Eq3
 		for(int i = 1 ; i < data.jobs-1; i ++) {		
@@ -548,7 +548,7 @@ public class OASCarbonTaxTOUCplex {
 			}			
 			
 			for(int k = 1 ; k < data.CO2IntervalEndTime.length; k ++) {					
-				expr = model.diff(expr, model.prod(z[i][k], data.CarbonTax*data.CO2Emission[k]/60.0));
+				expr = model.diff(expr, model.prod(z[i][k], data.CarbonTax*data.CO2Emission[k]*data.unitPowerConsumption[i]/60.0));
 			}				
 			model.addLe(R[i], expr, "Eq9CarbonTaxTOU");//Ri<=reveneuei*Ii-Ti*weight_i-xik*eck*power_i/60	
 		}			

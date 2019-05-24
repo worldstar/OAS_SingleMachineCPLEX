@@ -431,6 +431,7 @@ public class OASTOUCplex {
 			model.addLe(expr, data.intervalEndTime[k]-data.intervalEndTime[k-1], "TOU-xik");
 		}
 		
+		//Keep integrity of the xik
 		for(int i= 1; i < data.jobs-1;i++){//i=1,...,n	
 			IloNumExpr expr = model.numExpr();
 			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {	
