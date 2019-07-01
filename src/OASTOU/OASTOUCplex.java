@@ -317,6 +317,17 @@ public class OASTOUCplex {
 			}
 			model.addEq(expr1, I[i], "Eq2");
 		}
+		
+		//New equation: Speed up
+		for(int i= 0; i < data.jobs-1;i++){//i=0,...,n					
+			for (int j = 1; j < data.jobs; j++) {//j=1,...,n+1
+				if (i != j) {//data.arcs[i][j]==1
+					IloNumExpr expr1 = model.sum(y[i][j], y[j][i]);
+					model.addLe(expr1, I[i], "Eq3New1");
+				}								
+			}						
+		}		
+		
 		//公式(3)
 		for(int i= 0; i < data.jobs-1;i++){//i=0,...,n			
 			for (int j = 1; j < data.jobs; j++) {//j=1,...,n+1
@@ -555,7 +566,7 @@ public class OASTOUCplex {
 		cplex.solve();
 //		cplex.solution.fesible();
 //		System.out.println(cplex.model);		
-		cplex.printResults(cplex.model);
+//		cplex.printResults(cplex.model);
 //		System.out.println();
 		
 //		System.out.println("\ngetMIPRelativeGap: "+cplex.model.getMIPRelativeGap());

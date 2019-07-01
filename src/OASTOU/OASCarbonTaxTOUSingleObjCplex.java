@@ -34,8 +34,8 @@ public class OASCarbonTaxTOUSingleObjCplex {
 	Solution solution;
 	double cost; //目標值object
 	
-	public IloNumVar[][] y;	//if order i is before order j
-	public IloNumVar[] I;	//if order i is selected
+	public IloNumVar[][] u;	//if order i is before order j
+	public IloNumVar[] a;	//if order i is selected
 	public IloNumVar[] T;	//tardiness
 	public IloNumVar[] R;	//Revenue of each order
 	
@@ -79,7 +79,7 @@ public class OASCarbonTaxTOUSingleObjCplex {
 				servetimes.get(k).add(0.0);
 				while(terminate){
 					for (int j = 1; j < data.jobs - 1; j++) {
-						if (data.arcs[i][j]>=0.5 && model.getValue(y[i][j])>=0.5) {
+						if (data.arcs[i][j]>=0.5 && model.getValue(u[i][j])>=0.5) {
 							routes.get(k).add(j);
 							servetimes.get(k).add(model.getValue(C[j]));
 							i = j;
@@ -119,7 +119,7 @@ public class OASCarbonTaxTOUSingleObjCplex {
 					System.out.print("--- ");
 				}
 				else {
-					System.out.print(model.getValue(y[i][j])+" ");
+					System.out.print(model.getValue(u[i][j])+" ");
 				}				
 			}
 			System.out.println("");
@@ -139,7 +139,7 @@ public class OASCarbonTaxTOUSingleObjCplex {
 		System.out.println("\nRi:1,...,n");
 		double reve = 0;
 		for(int i = 1; i < data.jobs-1; i++) {
-			if(model.getValue(I[i]) > 0.5) {
+			if(model.getValue(a[i]) > 0.5) {
 				reve += model.getValue(R[i]);
 				System.out.print(model.getValue(R[i])+" ");	
 			}	
@@ -152,7 +152,7 @@ public class OASCarbonTaxTOUSingleObjCplex {
 		
 		System.out.print("\nIi ");
 		for(int i = 0; i < data.jobs; i++) {
-			System.out.print(model.getValue(I[i])+" ");			
+			System.out.print(model.getValue(a[i])+" ");			
 		}		
 		System.out.print("\nReleastTime ");
 		for(int i = 0; i < data.jobs; i++) {
@@ -170,7 +170,7 @@ public class OASCarbonTaxTOUSingleObjCplex {
 		for(int i = 1; i < data.jobs; i++) {
 			double tempSetup = 0;
 			for(int j = 0; j < data.jobs-1; j ++) {
-				if(i != j && model.getValue(y[j][i]) == 1) {
+				if(i != j && model.getValue(u[j][i]) == 1) {
 					tempSetup = data.setup[j][i];
 					break;
 				}
@@ -179,10 +179,10 @@ public class OASCarbonTaxTOUSingleObjCplex {
 		}			
 		System.out.print("\n(Pi+Sji) ");
 		for(int i = 1; i < data.jobs; i++) {
-			if(model.getValue(I[i])== 1){
+			if(model.getValue(a[i])== 1){
 				double tempSum = data.processingTime[i];
 				for(int j = 0 ; j < data.jobs-1; j++) {
-					if(i != j && model.getValue(y[j][i]) == 1) {
+					if(i != j && model.getValue(u[j][i]) == 1) {
 						tempSum += data.setup[j][i];
 					}
 				}
@@ -247,8 +247,8 @@ public class OASCarbonTaxTOUSingleObjCplex {
 //		model.setParam(IloCplex.IntParam.NodeAlgorithm, ilog.cplex.IloCplex.Algorithm.Dual);
 		model.setParam(IloCplex.Param.TimeLimit, executeSeconds);//Seconds
 		//variables		
-		y = new IloNumVar[data.jobs][data.jobs];
-		I = new IloNumVar[data.jobs];
+		u = new IloNumVar[data.jobs][data.jobs];
+		a = new IloNumVar[data.jobs];
 		T = new IloNumVar[data.jobs];
 		R = new IloNumVar[data.jobs];
 		C = new IloNumVar[data.jobs];				//完工時間
@@ -266,17 +266,17 @@ public class OASCarbonTaxTOUSingleObjCplex {
 			for (int j = 0; j < data.jobs; j++) {
 				if (data.arcs[i][j]==0) {
 //					y[i][j] = null;
-					y[i][j] = model.numVar(0, 0, IloNumVarType.Int, "y" + i + "," + j);//Eq13
+					u[i][j] = model.numVar(0, 0, IloNumVarType.Int, "y" + i + "," + j);//Eq13
 				}
 				else{
-					y[i][j] = model.numVar(0, 1, IloNumVarType.Int, "y" + i + "," + j);//Eq13									
+					u[i][j] = model.numVar(0, 1, IloNumVarType.Int, "y" + i + "," + j);//Eq13									
 				}
 			}
-			I[i] = model.numVar(0, 1, IloNumVarType.Int, "I" + i);//Eq13//Relaxed from int to float
+			a[i] = model.numVar(0, 1, IloNumVarType.Int, "I" + i);//Eq13//Relaxed from int to float
 			T[i] = model.numVar(0, 1E8, IloNumVarType.Float, "T" + i);
 			R[i] = model.numVar(0, 1E8, IloNumVarType.Float, "R" + i);
 			C[i] = model.numVar(0, 1E8, IloNumVarType.Float, "C" + i);	
-			y[data.jobs-1][i] = model.numVar(0, 0, IloNumVarType.Int, "y" + (data.jobs-1) + "," + i);//Eq13		
+			u[data.jobs-1][i] = model.numVar(0, 0, IloNumVarType.Int, "y" + (data.jobs-1) + "," + i);//Eq13		
 		}	
 		
 		//TOU and CO2
@@ -324,29 +324,39 @@ public class OASCarbonTaxTOUSingleObjCplex {
 			IloNumExpr expr1 = model.numExpr();			
 			for (int j = 1; j < data.jobs; j++) {//j=1,...,n+1
 				if (i != j) {//data.arcs[i][j]==1
-					expr1 = model.sum(expr1, y[i][j]);
+					expr1 = model.sum(expr1, u[i][j]);
 				}								
 			}			
-			model.addEq(expr1, I[i], "Eq1");
+			model.addEq(expr1, a[i], "Eq1");
 		}				
 		//公式(2)
 		for(int i= 1; i < data.jobs;i++){//i=1,...,n+1
 			IloNumExpr expr1 = model.numExpr();
 			for (int j = 0; j < data.jobs-1; j++) {//j=0,...,n
 				if (i != j) {//data.arcs[i][j]==1
-					expr1 = model.sum(expr1, y[j][i]);
+					expr1 = model.sum(expr1, u[j][i]);
 				}								
 			}
-			model.addEq(expr1, I[i], "Eq2");
+			model.addEq(expr1, a[i], "Eq2");
 		}
+		
+		//New equation: Speed up
+		for(int i= 0; i < data.jobs-1;i++){//i=0,...,n					
+			for (int j = 1; j < data.jobs; j++) {//j=1,...,n+1
+				if (i != j) {//data.arcs[i][j]==1
+					IloNumExpr expr1 = model.sum(u[i][j], u[j][i]);
+					model.addLe(expr1, a[i], "Eq3New1");
+				}								
+			}						
+		}		
 		//公式(3)
 		for(int i= 0; i < data.jobs-1;i++){//i=0,...,n			
 			for (int j = 1; j < data.jobs; j++) {//j=1,...,n+1
 				IloNumExpr expr1 = model.numExpr();			
 				if (i != j) {//data.arcs[i][j]==1
 					expr1 = model.sum(expr1, C[i]);//Ci
-					expr1 = model.sum(expr1, model.prod(data.setup[i][j]+data.processingTime[j], y[i][j]));//(sij+pi)yij
-					expr1 = model.sum(expr1, model.prod(data.deadline[i], model.diff(y[i][j], 1)));//dbar(yij-1)
+					expr1 = model.sum(expr1, model.prod(data.setup[i][j]+data.processingTime[j], u[i][j]));//(sij+pi)yij
+					expr1 = model.sum(expr1, model.prod(data.deadline[i], model.diff(u[i][j], 1)));//dbar(yij-1)
 					model.addLe(expr1, C[j], "Eq3");	
 				}				
 			}			
@@ -356,8 +366,8 @@ public class OASCarbonTaxTOUSingleObjCplex {
 			for (int j = 1; j < data.jobs; j++) {//j=1,...,n+1
 				IloNumExpr expr1 = model.numExpr();			
 				if (i != j) {//data.arcs[i][j]==1
-					expr1 = model.sum(expr1, model.prod(data.releaseTime[j]+data.processingTime[j],I[j]));//(rj+pj)Ij
-					expr1 = model.sum(expr1, model.prod(data.setup[i][j], y[i][j]));//(sij)yij
+					expr1 = model.sum(expr1, model.prod(data.releaseTime[j]+data.processingTime[j],a[j]));//(rj+pj)Ij
+					expr1 = model.sum(expr1, model.prod(data.setup[i][j], u[i][j]));//(sij)yij
 //					expr1 = model.sum(expr1, model.prod(I[i], model.prod(data.setup[i][j], y[i][j])));//(sij)yij*Ii
 					model.addLe(expr1, C[j], "Eq4");
 				}												
@@ -365,7 +375,7 @@ public class OASCarbonTaxTOUSingleObjCplex {
 		}
 		//公式(5)
 		for(int i= 0; i < data.jobs;i++){//i=0,...,n+1												
-			model.addLe(C[i], model.prod(data.deadline[i], I[i]), "Eq5");//Ci<=dbar*Ii
+			model.addLe(C[i], model.prod(data.deadline[i], a[i]), "Eq5");//Ci<=dbar*Ii
 		}
 		//公式(6)
 		for(int i= 0; i < data.jobs;i++){//i=0,...,n+1												
@@ -373,7 +383,7 @@ public class OASCarbonTaxTOUSingleObjCplex {
 		}		
 		//公式(7)
 		for(int i= 0; i < data.jobs;i++){//i=0,...,n+1											
-			model.addLe(T[i], model.prod(data.deadline[i]-data.dueDay[i], I[i]), "Eq7");//Ti<=Ci-di		
+			model.addLe(T[i], model.prod(data.deadline[i]-data.dueDay[i], a[i]), "Eq7");//Ti<=Ci-di		
 		}
 		//公式(8)
 		for(int i= 0; i < data.jobs;i++){//i=0,...,n+1												
@@ -391,26 +401,26 @@ public class OASCarbonTaxTOUSingleObjCplex {
 		model.addEq(C[0], 0, "Eq11-1");//Cn+1=max(dvar)
 		model.addLe(C[data.jobs-1], maxDeadline, "Eq11-2 and Eq16");//Cn+1=max(dvar)
 		//公式(12)
-		model.addEq(I[0], 1, "Eq12-1");//I0=1
-		model.addEq(I[data.jobs-1], 1, "Eq12-2");//In+1=1	
+		model.addEq(a[0], 1, "Eq12-1");//I0=1
+		model.addEq(a[data.jobs-1], 1, "Eq12-2");//In+1=1	
 		//公式(17)
 		IloNumExpr expr17 = model.numExpr();			
 		expr17 = model.sum(expr17, minReleaseTime);//min(releaseTime)
 		for(int i = 1 ; i < data.jobs; i ++) {
-			expr17 = model.sum(expr17, model.prod(data.processingTime[i], I[i]));
+			expr17 = model.sum(expr17, model.prod(data.processingTime[i], a[i]));
 			for(int j = 1 ; j < data.jobs-1; j ++) {				
 				if(i != j) {
-					expr17 = model.sum(expr17, model.prod(data.setup[j][i], y[j][i]));
+					expr17 = model.sum(expr17, model.prod(data.setup[j][i], u[j][i]));
 				}
 			}		
 		}		
 		model.addGe(C[data.jobs-1], expr17, "Eq17");
 		//公式(18)	
 		for(int i = 1 ; i < data.jobs-1; i ++) {//i=1,...,n
-			IloNumExpr expr18 = model.prod(data.releaseTime[i]+data.processingTime[i], I[i]);						
+			IloNumExpr expr18 = model.prod(data.releaseTime[i]+data.processingTime[i], a[i]);						
 			for(int j = 1 ; j < data.jobs-1; j ++) {				
 				if(i != j) {
-					expr18 = model.sum(expr18, model.prod(data.setup[j][i], y[j][i]));
+					expr18 = model.sum(expr18, model.prod(data.setup[j][i], u[j][i]));
 				}
 			}		
 			model.addGe(C[i], expr18, "Eq18");
@@ -420,10 +430,10 @@ public class OASCarbonTaxTOUSingleObjCplex {
 	public void buildTOU(IloCplex model) throws UnknownObjectException, IloException {
 		//STi:Eq1
 		for(int i = 1 ; i < data.jobs; i ++) {//i=1,...,n+1		
-			IloNumExpr expr = model.diff(C[i], model.prod(I[i], data.processingTime[i]));
+			IloNumExpr expr = model.diff(C[i], model.prod(a[i], data.processingTime[i]));
 			for(int j = 0 ; j < data.jobs-1; j ++) {//j=0,...,n	
 				if(i != j) {
-					expr = model.diff(expr, model.prod(data.setup[j][i], y[j][i]));
+					expr = model.diff(expr, model.prod(data.setup[j][i], u[j][i]));
 				}				
 			}
 			model.addGe(expr, ST[i]);
@@ -441,7 +451,7 @@ public class OASCarbonTaxTOUSingleObjCplex {
 		
 		//STi:Eq3
 		for(int i = 1 ; i < data.jobs-1; i ++) {		
-			model.addLe(model.prod(data.releaseTime[i], I[i]), ST[i]);
+			model.addLe(model.prod(data.releaseTime[i], a[i]), ST[i]);
 		}	
 		
 //		Paper Eq2.
@@ -501,8 +511,8 @@ public class OASCarbonTaxTOUSingleObjCplex {
 					break;
 				}
 				
-				model.addGe(x[i][k], model.diff(model.min(C[i], model.prod(I[i], data.intervalEndTime[k])), 
-						model.max(ST[i], model.prod(I[i], data.intervalEndTime[k-1]))));					
+				model.addGe(x[i][k], model.diff(model.min(C[i], model.prod(a[i], data.intervalEndTime[k])), 
+						model.max(ST[i], model.prod(a[i], data.intervalEndTime[k-1]))));					
 			}	
 		}
 		
@@ -516,14 +526,14 @@ public class OASCarbonTaxTOUSingleObjCplex {
 					break;
 				}
 				
-				model.addGe(z[i][k], model.diff(model.min(C[i], model.prod(I[i], data.CO2IntervalEndTime[k])), 
-						model.max(ST[i], model.prod(I[i], data.CO2IntervalEndTime[k-1]))));					
+				model.addGe(z[i][k], model.diff(model.min(C[i], model.prod(a[i], data.CO2IntervalEndTime[k])), 
+						model.max(ST[i], model.prod(a[i], data.CO2IntervalEndTime[k-1]))));					
 			}	
 		}		
 				
 //		//公式(9) with TOU. R[i] minus the electricity cost and carbon tax.
 		for(int i= 1; i < data.jobs-1;i++){//i=1,...,n	
-			IloNumExpr expr = model.diff(model.prod(data.profit[i], I[i]), model.prod(T[i], data.weight[i]));
+			IloNumExpr expr = model.diff(model.prod(data.profit[i], a[i]), model.prod(T[i], data.weight[i]));
 			for(int k = 1 ; k < data.intervalEndTime.length; k ++) {	
 				expr = model.diff(expr, model.prod(x[i][k], data.EC[k]*data.unitPowerConsumption[i]/60.0));
 			}			
@@ -543,7 +553,7 @@ public class OASCarbonTaxTOUSingleObjCplex {
       IloNumVar[] startVar2D = new IloNumVar[data.jobs*data.jobs];        
       for (int i = 0; i < data.jobs; i++) {
           for(int j = 0; j < data.jobs; j++) {
-              startVar2D[idx] = y[i][j];
+              startVar2D[idx] = u[i][j];
               idx ++;
           }                 
       }
@@ -552,23 +562,40 @@ public class OASCarbonTaxTOUSingleObjCplex {
     
 	public void solveRelaxation() throws IloException
 	{
-		IloConversion relax = model.conversion(I, IloNumVarType.Float);
+		IloConversion relax = model.conversion(a, IloNumVarType.Float);
 		model.add(relax);
 		
 		IloConversion relax2[] = new IloConversion[data.jobs];
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
-			relax2[i] = model.conversion(y[i], IloNumVarType.Float);
+			relax2[i] = model.conversion(u[i], IloNumVarType.Float);
 			model.add(relax2[i]);
 		}
 		model.solve();
 //        System.out.println("Relaxed solution status = " + model.getStatus());
 //        System.out.println("Relaxed solution getObjValue value  = " + model.getObjValue());	
 //        System.out.println("Relaxed solution getBestObjValue value  = " + model.getBestObjValue());		
+
+        startVal = new double[data.jobs];
+        startVal2D = new double[data.jobs*data.jobs];   
         
+        int idx = 0;
+        for (int i = 0; i < data.jobs; i++) {
+                startVal[i] = model.getValue(a[i]) > 0.5 ? 1:0;
+                for(int j = 0; j < data.jobs; j++) {
+	                	if(model.getValue(u[i][j]) > 0.9) {
+	                		startVal2D[idx] = 1;
+//	                		break;
+	                	}
+	                	else {
+	                		startVal2D[idx] = 0;
+	                	}
+                    idx ++;
+                }
+        }    		
 		model.delete(relax);
 		for(int i = 0 ; i < data.jobs; i ++) {//i=0,...,n+1
 			model.delete(relax2[i]);
-		}				
+		}	
 	}	
 	
 	/**
@@ -607,8 +634,8 @@ public class OASCarbonTaxTOUSingleObjCplex {
 				+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes);
 		
 		*/
-		int nJobs[] = new int[] {10, 15, 20, 25, 50, 100};//10, 15, 20, 25, 50, 100
-		int Tao[] = new int[] {1, 5, 9};
+		int nJobs[] = new int[] {10};//10, 15, 20, 25, 50, 100
+		int Tao[] = new int[] {1, 5, 9};//1, 5, 9
 		int R[] = new int[] {1, 5, 9};
 		String results = "";
 		
@@ -630,13 +657,15 @@ public class OASCarbonTaxTOUSingleObjCplex {
 						cplex.solve();
 						cplex_time2 = System.nanoTime();
 						cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
+//						cplex.printResults(cplex.model);
 						results = nJobs[i]+"-Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+ cplex.model.getObjValue()+ "," 
 								+ cplex.model.getBestObjValue()+ "," 
 								+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes+"\n";
 						System.out.println(results);
 						
+						
 						fileWrite1 fileWriter = new fileWrite1();
-						fileWriter.writeToFile(results, "OAS-CO2TaxTOU-MILP-Solutions.txt");
+						fileWriter.writeToFile(results, "OAS-CO2TaxTOU-NewEquation20190625.txt");
 						fileWriter.run();
 					}
 				}				

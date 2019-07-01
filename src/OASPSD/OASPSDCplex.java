@@ -252,7 +252,8 @@ public class OASPSDCplex {
 		for(int i = 1; i < data.jobs-1; i++){//i=1,...,n
 			obj = model.sum(obj, R[i]);
 		}
-		model.addMaximize(obj);
+		model.addMaximize(obj);					
+		
 		//加入限制式
 		//公式(1)
 		for(int i= 0; i < data.jobs-1;i++){//i=0,...,n
@@ -275,6 +276,16 @@ public class OASPSDCplex {
 			model.addEq(expr1, I[i], "Eq2");
 		}
 		
+		//New equation: Speed up
+		for(int i= 0; i < data.jobs-1;i++){//i=0,...,n					
+			for (int j = 1; j < data.jobs; j++) {//j=1,...,n+1
+				if (i != j) {//data.arcs[i][j]==1
+					IloNumExpr expr1 = model.sum(y[i][j], y[j][i]);
+					model.addLe(expr1, I[i], "Eq3New1");
+				}								
+			}						
+		}							
+		
 		//公式PSD: Yij: Ci is before Cj
 		for(int i= 1; i < data.jobs-1;i++){//i=0,...,n+1
 			for (int j = 0; j < data.jobs-1; j++) {//j=0,...,n
@@ -286,8 +297,8 @@ public class OASPSDCplex {
 					model.add(model.ifThen(model.and(ifStatements), model.eq(Y[i][j], 1)));	
 				}								
 			}
-		}
-		
+		}						
+			
 		//PSD Calculation: To sum the jobs processing time before job j
 		for(int j= 1; j < data.jobs-1;j++){//j=0,...,n+1
 			IloNumExpr expr1 = model.numExpr();	
@@ -299,6 +310,40 @@ public class OASPSDCplex {
 			}
 			model.addEq(PSD[j], expr1);
 		}
+		
+		//New equation: Speed up
+		for(int i= 0; i < data.jobs-1;i++){//i=0,...,n					
+			for (int j = 1; j < data.jobs; j++) {//j=1,...,n+1
+				if (i != j) {//data.arcs[i][j]==1
+					IloNumExpr expr1 = model.sum(Y[i][j], Y[j][i]);
+					model.addLe(expr1, I[i], "Eq3New2");
+				}								
+			}						
+		}							
+		
+//		Transition: Job i is before Job j, and Job j is before Job k. So Job i must be before k.
+//		for(int i= 0; i < data.jobs-1;i++){//i=0,...,n					
+//			for (int j = 1; j < data.jobs; j++) {//j=1,...,n+1
+//				for (int k = 1; k < data.jobs; k++) {//k=1,...,n+1
+//					if (i != j && j != k && i != k) {//data.arcs[i][j]==1
+//						IloNumExpr expr1 = model.sum(Y[i][j], Y[j][k]);
+//						expr1 = model.sum(expr1, Y[k][i]);
+//						model.addLe(expr1, 2, "Eq3New3");
+//					}					
+//				}								
+//			}						
+//		}						
+
+		//New equation: Cover cut
+//		for(int j = 1; j < data.jobs; j++){//j=1,...,n+1		
+//			IloNumExpr expr1 = model.numExpr();	
+//			for (int i= 0; i < data.jobs-1;i++) {//i=0,...,n	
+//				if (i != j) {//data.arcs[i][j]==1
+//				    expr1 = model.sum(expr1, model.prod((1+gamma)*data.processingTime[i], Y[i][j]));					
+//				}								
+//			}		
+//			model.addLe(expr1, model.prod(data.deadline[j]-data.processingTime[j], I[j]), "Eq3New2");
+//		}	
 		
 		//公式(3)
 		for(int i= 0; i < data.jobs-1;i++){//i=0,...,n			
@@ -312,7 +357,8 @@ public class OASPSDCplex {
 					model.addLe(expr1, C[j], "Eq3");	
 				}				
 			}			
-		}		
+		}				
+		
 		//公式(4)
 		for(int i= 0; i < data.jobs-1;i++){//i=0,...,n			
 			for (int j = 1; j < data.jobs; j++) {//j=1,...,n+1
@@ -328,6 +374,7 @@ public class OASPSDCplex {
 		for(int i= 0; i < data.jobs;i++){//i=0,...,n+1												
 			model.addLe(C[i], model.prod(data.deadline[i], I[i]), "Eq5");//Ci<=dbar*Ii
 		}
+		
 		//公式(6)
 		for(int i= 0; i < data.jobs;i++){//i=0,...,n+1												
 			model.addGe(T[i], model.diff(C[i], data.dueDay[i]), "Eq6");//Ti>=Ci-di
@@ -455,10 +502,10 @@ public class OASPSDCplex {
 		double cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
 //		System.out.println("\ncplex_time " + cplex_time + " bestcost " + cplex.cost+"," + cplex.solution.routes);
 		
-		int nJobs[] = new int[] {10, 15, 20, 25, 50, 100};//10, 15, 20, 25, 50, 100
-		int Tao[] = new int[] {1, 5, 9};
-		int R[] = new int[] {1, 5, 9};
-		double gamma[] = new double[] {0.1, 0.2, 0.3};
+		int nJobs[] = new int[] {10};//10, 15, 20, 25, 50, 100
+		int Tao[] = new int[] {1,5,9};
+		int R[] = new int[] {1,5,9};
+		double gamma[] = new double[] {0.2};//0.1, 0.2, 0.3
 		String results = "";
 		
 		for(int i = 0 ; i < nJobs.length; i++) {
@@ -471,17 +518,18 @@ public class OASPSDCplex {
 //							System.out.println("input succesfully: \n"+OASpath);
 							data = new Data();
 							data.process_OAS(OASpath,data,nJobs[i]+2);						
-							executeSeconds = (int)(nJobs[i]*60);
-							
-							if(nJobs[i] == 100) {
-								executeSeconds = 3600;
-							}
+//							executeSeconds = (int)(nJobs[i]*60);
+//							
+//							if(nJobs[i] == 100) {
+//								executeSeconds = 3600;
+//							}
+							executeSeconds = 3600;
 							
 							cplex_time1 = System.nanoTime();
 							cplex = new OASPSDCplex(data, gamma[m]);
 							cplex.build_model(executeSeconds);
-							cplex.solveRelaxation();
-							cplex.addSolution(cplex.model);
+//							cplex.solveRelaxation();
+//							cplex.addSolution(cplex.model);
 							cplex.solve();
 							cplex_time2 = System.nanoTime();
 //							cplex.printResults(cplex.model);
@@ -491,9 +539,9 @@ public class OASPSDCplex {
 									+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes+"\n";
 							System.out.print(results);
 							fileWrite1 fileWriter = new fileWrite1();
-							fileWriter.writeToFile(results, "OAS-PSD-MILP-Solutions.txt");
+							fileWriter.writeToFile(results, "OAS-PSD-MILP-Solutions-1Hour-NewEquation.txt");
 							fileWriter.run();						
-						}						
+						}				
 					}
 				}				
 			}
