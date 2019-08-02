@@ -79,7 +79,7 @@ public class OASCarbonTaxTOUSingleObjCplex {
 				servetimes.get(k).add(0.0);
 				while(terminate){
 					for (int j = 1; j < data.jobs - 1; j++) {
-						if (data.arcs[i][j]>=0.5 && model.getValue(u[i][j])>=0.5) {
+						if (data.arcs[i][j]>=0.5 && model.getValue(u[i][j])>=0.9) {
 							routes.get(k).add(j);
 							servetimes.get(k).add(model.getValue(C[j]));
 							i = j;
@@ -218,8 +218,8 @@ public class OASCarbonTaxTOUSingleObjCplex {
 		
 		System.out.print("\nPower(i) ");
 		for(int i = 0; i < data.jobs; i++) {
-			System.out.print(data.unitPowerConsumption[i]+" ");			
-		}		
+			System.out.print(data.unitPowerConsumption[i]+" ");
+		}				
 //		System.out.print("\nEC(i) 0 ");
 //		for(int i = 1; i < data.jobs-1; i++) {
 //			System.out.print(model.getValue(x[i][0])*data.unitPowerConsumption[i]*data.EC[0]/60.0+" ");			
@@ -228,9 +228,28 @@ public class OASCarbonTaxTOUSingleObjCplex {
 		for(int i = 0; i < data.jobs; i++) {
 			System.out.print(data.profit[i]+" ");			
 		}			
+		
+		System.out.print("\nTOUCost \n");
+		for(int k = 1 ; k < data.EC.length; k++) {
+			for(int i = 1; i < data.jobs-1; i++) {
+				if(i == 0) System.out.print(" ");
+				System.out.print(model.getValue(x[i][k])*data.unitPowerConsumption[i]*data.EC[k]/60.0+" ");			
+			}	
+			System.out.println("");
+		}	
+		
+		System.out.print("\nCO2Cost \n");
+		for(int k = 1 ; k < data.CO2IntervalEndTime.length; k++) {
+			for(int i = 1; i < data.jobs-1; i++) {
+				if(i == 0) System.out.print(" ");
+				System.out.print(model.getValue(z[i][k])*data.unitPowerConsumption[i]*data.CO2Emission[k]*data.CarbonTax/60.0+" ");			
+			}	
+			System.out.println("");
+		}			
+		
 		System.out.print("\nRi 0 ");
 		for(int i = 1; i < data.jobs-1; i++) {
-			System.out.print(model.getValue(R[i])+" ");			
+			System.out.print(model.getValue(R[i])+" ");		
 		}
 		System.out.print("\n");
 	}
@@ -635,8 +654,8 @@ public class OASCarbonTaxTOUSingleObjCplex {
 		
 		*/
 		int nJobs[] = new int[] {10};//10, 15, 20, 25, 50, 100
-		int Tao[] = new int[] {1, 5, 9};//1, 5, 9
-		int R[] = new int[] {1, 5, 9};
+		int Tao[] = new int[] {1};//1, 5, 9
+		int R[] = new int[] {1};
 		String results = "";
 		
 		for(int i = 0 ; i < nJobs.length; i++) {
@@ -647,7 +666,7 @@ public class OASCarbonTaxTOUSingleObjCplex {
 								+"/Dataslack_"+nJobs[i]+"orders_Tao"+Tao[j]+"R"+R[k]+"_"+repl+".txt";
 						data = new Data();
 						data.process_OAS(OASpath,data,nJobs[i]+2);						
-						executeSeconds = 3600;
+						executeSeconds = 600;
 						cplex_time1 = System.nanoTime();
 						cplex = new OASCarbonTaxTOUSingleObjCplex(data);
 						cplex.build_model(executeSeconds);
@@ -657,7 +676,7 @@ public class OASCarbonTaxTOUSingleObjCplex {
 						cplex.solve();
 						cplex_time2 = System.nanoTime();
 						cplex_time = (cplex_time2 - cplex_time1) / 1e9;//求解時間，單位s
-//						cplex.printResults(cplex.model);
+						cplex.printResults(cplex.model);
 						results = nJobs[i]+"-Tao"+Tao[j]+"R"+R[k]+"_"+repl+","+ cplex.model.getObjValue()+ "," 
 								+ cplex.model.getBestObjValue()+ "," 
 								+ cplex.model.getMIPRelativeGap()+"," + cplex_time+"," + cplex.solution.routes+"\n";

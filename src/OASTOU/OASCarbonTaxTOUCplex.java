@@ -170,7 +170,7 @@ public class OASCarbonTaxTOUCplex {
 			System.out.print(data.processingTime[i]+" ");			
 		}		
 		System.out.print("\nSji ");
-		for(int i = 0; i < data.jobs; i++) {
+		for(int i = 1; i < data.jobs; i++) {
 			double tempSetup = 0;
 			for(int j = 0; j < data.jobs-1; j ++) {
 				if(i != j && model.getValue(y[j][i]) == 1) {
@@ -180,21 +180,21 @@ public class OASCarbonTaxTOUCplex {
 			}
 			System.out.print(tempSetup+" ");					
 		}			
-		System.out.print("\n(Pi+Sji) ");
-		for(int i = 0; i < data.jobs; i++) {
-			if(model.getValue(I[i])== 1){
-				double tempSum = data.processingTime[i];
-				for(int j = 0 ; j < data.jobs; j++) {
-					if(i != j && model.getValue(y[j][i]) == 1) {
-						tempSum += data.setup[j][i];
-					}
-				}
-				System.out.print(tempSum+" ");					
-			}
-			else {
-				System.out.print("0 ");	
-			}		
-		}		
+//		System.out.print("\n(Pi+Sji) ");
+//		for(int i = 0; i < data.jobs; i++) {
+//			if(model.getValue(I[i])== 1){
+//				double tempSum = data.processingTime[i];
+//				for(int j = 0 ; j < data.jobs; j++) {
+//					if(i != j && model.getValue(y[j][i]) == 1) {
+//						tempSum += data.setup[j][i];
+//					}
+//				}
+//				System.out.print(tempSum+" ");					
+//			}
+//			else {
+//				System.out.print("0 ");	
+//			}		
+//		}		
 		
 		System.out.print("\nCi ");
 		for(int i = 0; i < data.jobs; i++) {
@@ -616,7 +616,7 @@ public class OASCarbonTaxTOUCplex {
 		cplex.solve();
 //		cplex.solution.fesible();
 //		System.out.println(cplex.model);		
-//		cplex.printResults(cplex.model);
+		cplex.printResults(cplex.model);
 //		System.out.println();
 		
 //		System.out.println("\ngetMIPRelativeGap: "+cplex.model.getMIPRelativeGap());
